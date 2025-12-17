@@ -17,7 +17,7 @@ async function subscribe(serviceWorkerReg) {
     if (subscription === null) {
         subscription = await serviceWorkerReg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: 'BPj1sl5Dtd7yap6_bCwqGyBVga2KtU-KwMJ1UjnIJ77_1dx1MYKVl8ZcgG-68e6tdcUudmX9H135uh-sjl3trhE',
+            applicationServerKey: 'BJFvSsHhCT8vKMQ9GtUiMmXZlnzzepGZvGqLwcbfrFxpSoBhuL6x52r_ivBW7PhgROj6X8w4wm7986xgURm1r1s',
         });
 
         // Send subscription to server

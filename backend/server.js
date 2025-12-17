@@ -342,6 +342,33 @@ app.get('/debug-subscriptions', async (req, res) => {
     }
 });
 
+app.get('/cleanup-subscriptions', async (req, res) => {
+    try {
+        const pool = require('pg').Pool;
+        // Delete all subscriptions
+        const result = await SubscriptionModel.deleteAll?.() || 
+            await new Promise((resolve, reject) => {
+                // Fallback: query to delete all
+                const pgPool = new (require('pg')).Pool({
+                    connectionString: process.env.DATABASE_URL,
+                    ssl: { rejectUnauthorized: false }
+                });
+                pgPool.query('DELETE FROM subscriptions', (err, result) => {
+                    pgPool.end();
+                    if (err) reject(err);
+                    else resolve(result);
+                });
+            });
+        
+        res.json({ 
+            message: 'All subscriptions deleted',
+            deleted: result?.rowCount || 'unknown'
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/debug-vapid', (req, res) => {
     res.json({
         hasPublicKey: !!process.env.PUBLIC_KEY,

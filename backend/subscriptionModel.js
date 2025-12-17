@@ -105,6 +105,12 @@ const SubscriptionModel = {
         if (!filter._id) return;
         const query = 'DELETE FROM subscriptions WHERE id = $1';
         await pool.query(query, [filter._id]);
+    },
+
+    deleteAll: async () => {
+        const query = 'DELETE FROM subscriptions';
+        const result = await pool.query(query);
+        return result;
     }
 };
 
