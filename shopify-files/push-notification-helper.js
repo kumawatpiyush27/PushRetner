@@ -1,8 +1,9 @@
 // Push Notification Helper for Shopify
 // Place this file in your Shopify theme: Assets > push-notification-helper.js
 
-// IMPORTANT: Replace this with your deployed backend URL
-const BACKEND_URL = 'https://real-wings-wash.loca.lt'; // Localtunnel URL (No Warning Page)
+// IMPORTANT: Ensure your Shopify App Proxy (e.g., /apps/push) points to your Vercel Backend URL.
+// You do not need to hardcode the URL here if using the proxy.
+const BACKEND_URL = ''; // Kept for reference, logic uses /apps/push proxy below
 
 // Subscribe to push notifications (Direct App Proxy Method)
 async function subscribeToPushNotifications() {
