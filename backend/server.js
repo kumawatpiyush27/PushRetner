@@ -12,7 +12,8 @@ const path = require('path');
 const fs = require('fs');
 
 // Explicitly serve sw.js with Service-Worker-Allowed header (Matches /sw.js AND /apps/push/sw.js)
-app.get(/.*\/sw\.js$/, (req, res) => {
+// Explicitly serve sw.js with Service-Worker-Allowed header
+app.get('/sw.js', (req, res) => {
     console.log('📢 Request received for /sw.js');
     res.set('Service-Worker-Allowed', '/');
     res.set('Content-Type', 'application/javascript');
