@@ -394,15 +394,28 @@ app.post('/broadcast', async (req, res) => {
 
         const promises = subscriptions.map(async (sub) => {
             try {
+                // Log subscription structure for debugging
+                console.log(`📝 Processing subscription ${sub._id}:`, {
+                    hasEndpoint: !!sub.endpoint,
+                    endpointType: typeof sub.endpoint,
+                    hasKeys: !!sub.keys,
+                    keysType: typeof sub.keys,
+                    keysStructure: sub.keys ? {
+                        p256dh: sub.keys.p256dh ? 'present' : 'missing',
+                        auth: sub.keys.auth ? 'present' : 'missing',
+                        keys: Object.keys(sub.keys || {})
+                    } : 'no keys object'
+                });
+                
                 // Validate subscription structure
                 if (!sub.endpoint || typeof sub.endpoint !== 'string') {
                     throw new Error(`Invalid subscription: endpoint is ${typeof sub.endpoint}`);
                 }
                 if (!sub.keys || typeof sub.keys !== 'object') {
-                    throw new Error(`Invalid subscription: keys is ${typeof sub.keys}`);
+                    throw new Error(`Invalid subscription: keys is ${typeof sub.keys} (${JSON.stringify(sub.keys)})`);
                 }
                 if (!sub.keys.p256dh || !sub.keys.auth) {
-                    throw new Error('Invalid subscription: missing p256dh or auth in keys');
+                    throw new Error(`Invalid subscription: missing p256dh (${sub.keys.p256dh ? 'present' : 'missing'}) or auth (${sub.keys.auth ? 'present' : 'missing'}). Keys: ${JSON.stringify(Object.keys(sub.keys))}`);
                 }
 
                 // Format subscription properly for webPush
@@ -431,9 +444,13 @@ app.post('/broadcast', async (req, res) => {
                 console.error('❌ Failed to send notification:', {
                     endpoint: sub.endpoint ? sub.endpoint.substring(0, 50) : 'unknown',
                     error: err.message,
-                    statusCode: err.statusCode
+                    statusCode: err.statusCode,
+                    fullError: err.toString()
                 });
-                errors.push(err.message);
+                errors.push({
+                    endpoint: sub.endpoint ? sub.endpoint.substring(0, 50) : 'unknown',
+                    error: err.message
+                });
                 failCount++;
                 if (err.statusCode === 410 || err.statusCode === 404) {
                     console.log('🗑️ Removing invalid subscription');
@@ -451,7 +468,7 @@ app.post('/broadcast', async (req, res) => {
             totalSubscribers: subscriptions.length,
             sent: successCount,
             failed: failCount,
-            errors: errors.slice(0, 5), // Return first 5 errors
+            errors: errors.slice(0, 10), // Return first 10 errors with details
             message: `Broadcast sent to ${successCount} subscribers`
         });
     } catch (error) {
