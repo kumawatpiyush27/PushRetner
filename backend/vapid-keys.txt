@@ -1,0 +1,6 @@
+# VAPID Keys for Push Notifications
+
+PUBLIC_KEY=BPj1sl5Dtd7yap6_bCwqGyBVga2KtU-KwMJ1UjnIJ77_1dx1MYKVl8ZcgG-68e6tdcUudmX9H135uh-sjl3trhE
+PRIVATE_KEY=Hdej8iHYzvdzZzgQhA65OQN6B9tF9cgz2QUocWgtdG4
+
+# Copy these to your .env file
