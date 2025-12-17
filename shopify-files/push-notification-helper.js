@@ -8,39 +8,53 @@ const BACKEND_URL = ''; // Kept for reference, logic uses /apps/push proxy below
 // Subscribe to push notifications (Direct App Proxy Method)
 async function subscribeToPushNotifications() {
     try {
-        // 1. Request Permission
+        console.log('Step 1: Requesting Permission...');
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            throw new Error('Permission not granted');
+            throw new Error('Permission blocked by user');
         }
 
-        // 2. Register Service Worker via App Proxy
-        // This path maps to: https://ngrok-url/sw.js
+        console.log('Step 2: Registering SW...');
         const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
             scope: '/apps/push/'
         });
-
         await navigator.serviceWorker.ready;
+        console.log('SW Registered:', registration);
 
-        // 3. Subscribe
+        console.log('Step 3: Creating Subscription with VAPID...');
+        // Replace this with your actual VAPID Public Key from Vercel env
+        const publicVapidKey = 'BPj1sl5Dtd7yap6_bCwqGyBVga2KtU-KwMJ1UjnIJ77_1dx1MYKVl8ZcgG-68e6tdcUudmX9H135uh-sjl3trhE';
+
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: 'BPj1sl5Dtd7yap6_bCwqGyBVga2KtU-KwMJ1UjnIJ77_1dx1MYKVl8ZcgG-68e6tdcUudmX9H135uh-sjl3trhE'
+            applicationServerKey: publicVapidKey
         });
+        console.log('Subscription Object Created:', JSON.stringify(subscription));
 
-        // 4. Send to Backend via Proxy
-        // Maps to: https://ngrok-url/subscribe
-        await fetch('/apps/push/subscribe', {
+        console.log('Step 4: Sending to Backend via Proxy...');
+        const response = await fetch('/apps/push/subscribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(subscription)
         });
 
-        return { success: true, message: 'Subscribed successfully!' };
+        console.log('Server Response Status:', response.status);
+
+        if (!response.ok) {
+            // Try to parse error text to show detailed reason
+            const text = await response.text();
+            throw new Error(`Server Error ${response.status}: ${text}`);
+        }
+
+        console.log('Step 5: Success!');
+        alert('✅ Subscribed Successfully! ID saved.');
+        return { success: true };
 
     } catch (error) {
-        console.error('Subscription failed:', error);
-        alert('Debug Error: ' + error.message); // Show exact error to user
+        console.error('Subscription Failed:', error);
+        alert('❌ Error details: ' + error.message);
         return { success: false, message: error.message };
     }
 }
