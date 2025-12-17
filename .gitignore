@@ -5,3 +5,6 @@ dist/
 build/
 coverage/
 .vscode/
+
+.vercel
+.env*.local
