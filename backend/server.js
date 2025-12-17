@@ -1125,7 +1125,7 @@ app.get('/test-single-notification', async (req, res) => {
 
 // Broadcast notification to all subscribers
 app.post('/broadcast', async (req, res) => {
-    const { title, message, icon, url } = req.body;
+    const { title, message, icon, url, image, buttons } = req.body;
 
     try {
         console.log('📢 Broadcast request received:', { title, message });
@@ -1204,7 +1204,8 @@ app.post('/broadcast', async (req, res) => {
                     JSON.stringify({
                         title: title || 'Notification',
                         description: message || 'You have a new notification',
-                        image: icon || 'https://cdn2.vectorstock.com/i/thumb-large/94/66/emoji-smile-icon-symbol-smiley-face-vector-26119466.jpg',
+                        image: image || icon || 'https://cdn2.vectorstock.com/i/thumb-large/94/66/emoji-smile-icon-symbol-smiley-face-vector-26119466.jpg',
+                        buttons: buttons || [],
                         url: url || ''
                     }),
                     options

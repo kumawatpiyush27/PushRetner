@@ -8,32 +8,37 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('push', async function (event) {
     try {
         const message = await event.data.json();
-        let { title, description, image, url } = message;
+        let { title, description, image, url, buttons } = message;
 
         console.log('Push notification received:', message);
 
+        // Build actions from buttons array
+        const actions = (buttons && buttons.length > 0) 
+            ? buttons.map((btn, idx) => ({
+                action: btn.url || '/',
+                title: btn.text || 'Action ' + (idx + 1)
+            }))
+            : [];
+
+        const notificationOptions = {
+            body: description,
+            icon: image,
+            badge: image,
+            vibrate: [200, 100, 200],
+            tag: 'notification-' + Date.now(),
+            requireInteraction: false,
+            data: {
+                url: url || '/'
+            }
+        };
+
+        // Add actions if buttons exist
+        if (actions.length > 0) {
+            notificationOptions.actions = actions;
+        }
+
         await event.waitUntil(
-            self.registration.showNotification(title, {
-                body: description,
-                icon: image,
-                badge: image,
-                vibrate: [200, 100, 200],
-                tag: 'notification-' + Date.now(),
-                requireInteraction: false,
-                actions: [
-                    {
-                        action: 'open',
-                        title: 'Open'
-                    },
-                    {
-                        action: 'close',
-                        title: 'Close'
-                    }
-                ],
-                data: {
-                    url: url || '/'
-                }
-            })
+            self.registration.showNotification(title, notificationOptions)
         );
     } catch (error) {
         console.error('Error showing notification:', error);
@@ -44,10 +49,12 @@ self.addEventListener('push', async function (event) {
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
 
-    if (event.action === 'open' || !event.action) {
-        const urlToOpen = event.notification.data.url || '/';
+    // Check if action is a URL (from button) or default notification click
+    const urlToOpen = (event.action && event.action.startsWith('http')) 
+        ? event.action 
+        : event.notification.data.url || '/';
 
-        event.waitUntil(
+    event.waitUntil(
             clients.openWindow(urlToOpen)
         );
     }

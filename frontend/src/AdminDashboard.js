@@ -116,6 +116,8 @@ export default function AdminDashboard() {
                     title: selectedIcon + ' ' + formData.title,
                     message: formData.message,
                     url: formData.link,
+                    image: image,
+                    buttons: buttons,
                     icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
                 })
             });
