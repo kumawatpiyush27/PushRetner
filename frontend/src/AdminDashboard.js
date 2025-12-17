@@ -7,7 +7,7 @@ export default function AdminDashboard() {
     const [campaigns, setCampaigns] = useState(0);
     const [successRate, setSuccessRate] = useState('100%');
     const [currentStep, setCurrentStep] = useState(1);
-    const [selectedIcon, setSelectedIcon] = useState('🔔');
+    const [selectedIcon, setSelectedIcon] = useState('');
     const [buttons, setButtons] = useState([]);
     const [image, setImage] = useState(null);
     const [templates, setTemplates] = useState([]);
@@ -17,7 +17,7 @@ export default function AdminDashboard() {
         name: '',
         title: '',
         message: '',
-        link: 'https://www.retne.ai'
+        link: ''
     });
 
     const icons = ['🔔', '🎉', '💰', '⭐', '🎁', '🚀', '❤️', '✅'];
@@ -286,10 +286,25 @@ export default function AdminDashboard() {
                                 </div>
 
                                 <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #667eea' }}>
-                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>📱 Preview</p>
-                                    <div style={{ background: 'white', padding: '12px', borderRadius: '6px' }}>
-                                        <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>{selectedIcon} {formData.title || 'Title'}</strong>
-                                        <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>{formData.message || 'Message'}</p>
+                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>📱 Live Preview</p>
+                                    <div style={{ background: 'white', padding: '12px', borderRadius: '6px', minHeight: '60px', display: 'flex', alignItems: 'center' }}>
+                                        {(selectedIcon || formData.title || formData.message) ? (
+                                            <div>
+                                                {(selectedIcon || formData.title) && (
+                                                    <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#1a1a2e' }}>
+                                                        {selectedIcon && <span>{selectedIcon} </span>}
+                                                        {formData.title || '(Empty)'}
+                                                    </strong>
+                                                )}
+                                                {formData.message && (
+                                                    <p style={{ fontSize: '12px', color: '#666', margin: 0, lineHeight: '1.4' }}>
+                                                        {formData.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>👆 Type title & message to see preview</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -442,42 +457,54 @@ export default function AdminDashboard() {
 
                                 {/* Campaign Preview */}
                                 <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '12px', marginBottom: '25px' }}>
-                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '15px', fontWeight: 600 }}>📱 Desktop Preview:</p>
+                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '15px', fontWeight: 600 }}>📱 Live Notification Preview:</p>
                                     <div style={{
                                         background: 'white',
                                         border: '1px solid #e0e0e0',
                                         borderRadius: '8px',
                                         padding: '20px',
-                                        maxWidth: '500px'
+                                        maxWidth: '500px',
+                                        minHeight: '150px',
+                                        display: 'flex',
+                                        flexDirection: 'column'
                                     }}>
                                         {image && (
-                                            <img src={image} alt="campaign" style={{ width: '100%', borderRadius: '8px', marginBottom: '12px', maxHeight: '200px', objectFit: 'cover' }} />
+                                            <img src={image} alt="campaign" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px', maxHeight: '250px', objectFit: 'cover' }} />
                                         )}
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                            <span style={{ fontSize: '28px' }}>{selectedIcon}</span>
-                                            <div style={{ flex: 1 }}>
-                                                <strong style={{ display: 'block', fontSize: '16px', marginBottom: '6px', color: '#1a1a2e' }}>
-                                                    {formData.title}
-                                                </strong>
-                                                <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: '1.5' }}>
-                                                    {formData.message}
-                                                </p>
+                                        {(selectedIcon || formData.title || formData.message) ? (
+                                            <>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                                                    {selectedIcon && <span style={{ fontSize: '32px', lineHeight: 1 }}>{selectedIcon}</span>}
+                                                    <div style={{ flex: 1 }}>
+                                                        {formData.title && (
+                                                            <strong style={{ display: 'block', fontSize: '16px', marginBottom: '6px', color: '#1a1a2e' }}>
+                                                                {formData.title}
+                                                            </strong>
+                                                        )}
+                                                        {formData.message && (
+                                                            <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: '1.5' }}>
+                                                                {formData.message}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 {buttons.length > 0 && (
-                                                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                                        {buttons.map(btn => (
+                                                    <div style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {buttons.map(btn => btn.text && (
                                                             <a
                                                                 key={btn.id}
-                                                                href={btn.url}
+                                                                href={btn.url || '#'}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 style={{
-                                                                    padding: '8px 14px',
+                                                                    padding: '8px 16px',
                                                                     background: '#667eea',
                                                                     color: 'white',
                                                                     borderRadius: '6px',
                                                                     textDecoration: 'none',
                                                                     fontSize: '12px',
-                                                                    fontWeight: 600
+                                                                    fontWeight: 600,
+                                                                    cursor: 'pointer'
                                                                 }}
                                                             >
                                                                 {btn.text}
@@ -485,8 +512,12 @@ export default function AdminDashboard() {
                                                         ))}
                                                     </div>
                                                 )}
+                                            </>
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
+                                                <p style={{ textAlign: 'center' }}>📝 Add title, message, or icon to see preview</p>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -495,9 +526,9 @@ export default function AdminDashboard() {
                                     <p style={{ margin: 0, color: '#047857', fontSize: '14px' }}>
                                         <strong>✅ Ready to send</strong><br />
                                         <span style={{ fontSize: '12px' }}>
-                                            Campaign: <strong>{formData.name}</strong><br/>
-                                            Recipients: <strong>{subscribers}</strong> subscribers<br/>
-                                            Link: <strong style={{ wordBreak: 'break-all' }}>{formData.link}</strong>
+                                            {formData.name && <><strong>Campaign:</strong> {formData.name}<br/></>}
+                                            <strong>Recipients:</strong> {subscribers} subscribers<br/>
+                                            {formData.link && <><strong>Link:</strong> <span style={{ wordBreak: 'break-all' }}>{formData.link}</span></>}
                                         </span>
                                     </p>
                                 </div>
@@ -505,7 +536,9 @@ export default function AdminDashboard() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '25px', flexWrap: 'wrap' }}>
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <button className="btn-secondary" onClick={() => setCurrentStep(3)}>← Back</button>
-                                        <button className="btn-primary" onClick={saveTemplate} style={{ background: '#667eea' }}>💾 Save Template</button>
+                                        {formData.title && formData.message && (
+                                            <button className="btn-primary" onClick={saveTemplate} style={{ background: '#667eea' }}>💾 Save Template</button>
+                                        )}
                                     </div>
                                     <button className="btn-success" onClick={submitCampaign}>🚀 Send to All</button>
                                 </div>
