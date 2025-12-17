@@ -244,33 +244,47 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Subscription endpoint
-app.post('/subscribe', async (req, res, next) => {
+// Subscription endpoint
+app.post('/subscribe', async (req, res) => {
     try {
+        console.log('🔔 Received subscription request');
         const newSubscription = await SubscriptionModel.create({ ...req.body });
-        console.log('✅ New User Subscribed & Stored in DB!');
+        console.log('✅ New User Subscribed & Stored in DB! ID:', newSubscription.id);
+
+        if (!process.env.PUBLIC_KEY || !process.env.PRIVATE_KEY) {
+            console.error('❌ Missing VAPID Keys in Environment Variables');
+            return res.status(500).json({ error: 'Server misconfiguration: Missing Keys' });
+        }
 
         const options = {
             vapidDetails: {
-                subject: 'mailto:myemail@example.com',
+                subject: 'mailto:admin@zyrajewel.co.in', // Changed to look like a real domain
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
         };
 
-        const res2 = await webPush.sendNotification(
-            newSubscription,
-            JSON.stringify({
-                title: 'Hello from server',
-                description: 'This message is coming from the server',
-                image: 'https://cdn2.vectorstock.com/i/thumb-large/94/66/emoji-smile-icon-symbol-smiley-face-vector-26119466.jpg',
-            }),
-            options
-        );
+        console.log('📤 Sending welcome notification...');
+        try {
+            await webPush.sendNotification(
+                newSubscription,
+                JSON.stringify({
+                    title: 'Welcome to Zyra Jewel!',
+                    description: 'You will now receive updates about our latest collections.',
+                    image: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                }),
+                options
+            );
+            console.log('✅ Welcome notification sent');
+        } catch (pushError) {
+            console.error('⚠️ Failed to send welcome notification (but subscription saved):', pushError);
+            // Don't fail the request if just the notification fails, as subscription is saved
+        }
 
-        res.sendStatus(200);
+        res.status(200).json({ success: true, message: 'Subscribed successfully' });
     } catch (error) {
-        console.log(error);
-        res.sendStatus(500);
+        console.error('❌ Error in /subscribe:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 });
 
