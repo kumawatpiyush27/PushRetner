@@ -42,10 +42,12 @@ app.get('/sw.js', (req, res) => {
 });
 
 // Serve static files
-app.get('/', (req, res) => {
-    res.send('Backend is running!');
-});
 app.use(express.static('public'));
+app.use(express.static('../frontend/build'));
+
+app.get('/', (req, res) => {
+    res.sendFile(require('path').join(__dirname, '../frontend/build/index.html'));
+});
 
 // Subscribe Page Endpoint (Popup Window)
 app.get('/subscribe-window', (req, res) => {
