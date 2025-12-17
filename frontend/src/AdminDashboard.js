@@ -119,12 +119,24 @@ export default function AdminDashboard() {
             return;
         }
 
+        const imageUrl = getImageUrlForNotification();
+        const buttonsList = buttons.map(btn => ({ text: btn.text, url: btn.url })).filter(btn => btn.text);
+
+        console.log('🔍 DEBUG submitCampaign:', {
+            imageUrl,
+            imageUrl_length: imageUrl ? imageUrl.length : 0,
+            buttons_state: buttons,
+            buttons_mapped: buttonsList,
+            selectedIcon,
+            formData
+        });
+
         const payload = {
             title: selectedIcon + ' ' + formData.title,
             message: formData.message,
             url: formData.link,
-            image: getImageUrlForNotification() || '',
-            buttons: buttons.map(btn => ({ text: btn.text, url: btn.url })).filter(btn => btn.text),
+            image: imageUrl || '',
+            buttons: buttonsList,
             icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
         };
 
