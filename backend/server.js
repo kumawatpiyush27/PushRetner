@@ -2,13 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
 const SubscriptionModel = require('./subscriptionModel');
-const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
 const port = 9000;
-const DatabaseName = 'pushDb';
-const DatabaseURI = 'mongodb+srv://root:root@cluster0.mreyzcs.mongodb.net/pushDb';
 
 const path = require('path');
 
@@ -306,10 +303,8 @@ app.post('/broadcast', async (req, res) => {
 
 // Connect to MongoDB and start server
 // Connect to MongoDB
-mongoose
-    .connect(DatabaseURI)
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => console.log('❌ MongoDB Connection Error:', err.message));
+// MongoDB connection removed - using Postgres via SubscriptionModel
+
 
 // Export app for Vercel
 module.exports = app;
