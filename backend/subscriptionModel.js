@@ -42,12 +42,10 @@ const SubscriptionModel = {
     find: async () => {
         const res = await pool.query('SELECT * FROM subscriptions');
         return res.rows.map(row => ({
-            ...row,
-            _id: row.id,
-            expirationTime: row.expiration_time // map back to snake_case if needed by logic, but original used camelCase in DB? 
-            // Postgres columns are typically snake_case or lowercase. 
-            // Code assumes 'expirationTime' in js objects.
-            // Let's ensure consistency assuming API sends 'expirationTime'
+            endpoint: row.endpoint,
+            expirationTime: row.expiration_time,
+            keys: typeof row.keys === 'string' ? JSON.parse(row.keys) : row.keys,
+            _id: row.id
         }));
     },
 

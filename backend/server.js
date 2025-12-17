@@ -343,8 +343,14 @@ app.post('/broadcast', async (req, res) => {
 
         const promises = subscriptions.map(async (sub) => {
             try {
+                // Format subscription properly for webPush
+                const subscription = {
+                    endpoint: sub.endpoint,
+                    keys: sub.keys
+                };
+                
                 await webPush.sendNotification(
-                    sub,
+                    subscription,
                     JSON.stringify({
                         title: title || 'Notification',
                         description: message || 'You have a new notification',
@@ -355,7 +361,7 @@ app.post('/broadcast', async (req, res) => {
                 );
                 successCount++;
             } catch (err) {
-                console.log('Failed to send notification');
+                console.log('Failed to send notification to', sub.endpoint, err.message);
                 failCount++;
                 if (err.statusCode === 410 || err.statusCode === 404) {
                     await SubscriptionModel.deleteOne({ _id: sub._id });
