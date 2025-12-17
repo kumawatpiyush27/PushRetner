@@ -10,52 +10,88 @@ self.addEventListener('push', async function (event) {
         const message = await event.data.json();
         let { title, description, image, url, buttons } = message;
 
-        console.log('Push notification received:', message);
+        console.log('🔔 Push notification received:', {
+            title,
+            description,
+            hasImage: !!image,
+            buttonsCount: buttons ? buttons.length : 0,
+            buttons: buttons
+        });
 
         // Build actions from buttons array
         const actions = (buttons && buttons.length > 0) 
             ? buttons.map((btn, idx) => ({
-                action: btn.url || '/',
+                action: `button_${idx}_${btn.url}`,
                 title: btn.text || 'Action ' + (idx + 1)
             }))
             : [];
 
         const notificationOptions = {
             body: description,
-            icon: image,
-            badge: image,
+            icon: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+            badge: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
             vibrate: [200, 100, 200],
             tag: 'notification-' + Date.now(),
             requireInteraction: false,
             data: {
-                url: url || '/'
+                url: url || '/',
+                buttons: buttons || []
             }
         };
 
         // Add actions if buttons exist
         if (actions.length > 0) {
             notificationOptions.actions = actions;
+            console.log('✅ Added actions:', actions);
         }
+
+        console.log('📢 Showing notification with options:', notificationOptions);
 
         await event.waitUntil(
             self.registration.showNotification(title, notificationOptions)
         );
     } catch (error) {
-        console.error('Error showing notification:', error);
+        console.error('❌ Error showing notification:', error);
     }
 });
 
 // Handle notification click
 self.addEventListener('notificationclick', function (event) {
+    console.log('🖱️ Notification clicked:', {
+        action: event.action,
+        notification: event.notification.tag
+    });
+
     event.notification.close();
 
-    // Check if action is a URL (from button) or default notification click
-    const urlToOpen = (event.action && event.action.startsWith('http')) 
-        ? event.action 
-        : event.notification.data.url || '/';
+    let urlToOpen = '/';
+
+    // Check if it's a button click with URL embedded in action
+    if (event.action && event.action.includes('button_')) {
+        // Extract URL from action string (format: button_0_https://example.com)
+        const parts = event.action.split('_');
+        if (parts.length >= 3) {
+            urlToOpen = parts.slice(2).join('_');
+        }
+    } else if (event.notification.data && event.notification.data.url) {
+        // Default notification click - use notification URL
+        urlToOpen = event.notification.data.url;
+    }
+
+    console.log('🌐 Opening URL:', urlToOpen);
 
     event.waitUntil(
-            clients.openWindow(urlToOpen)
-        );
-    }
+        clients.matchAll({ type: 'window' }).then(clientList => {
+            // Check if window is already open
+            for (let client of clientList) {
+                if (client.url === urlToOpen && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // Open new window if not already open
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
 });
