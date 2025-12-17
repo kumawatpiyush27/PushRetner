@@ -243,8 +243,36 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Subscription endpoint
-// Subscription endpoint
+// Subscription endpoint - GET (for informational purposes)
+app.get('/subscribe', (req, res) => {
+    res.send(`
+        <html>
+            <head>
+                <title>Subscribe to Push Notifications</title>
+                <style>
+                    body { font-family: sans-serif; text-align: center; padding: 50px 20px; max-width: 600px; margin: 0 auto; }
+                    .container { background: #f0f0f0; padding: 30px; border-radius: 10px; margin-top: 50px; }
+                    button { background: #000; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-size: 16px; cursor: pointer; }
+                    button:hover { opacity: 0.8; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>📬 Subscribe to Notifications</h2>
+                    <p>Get updates about new products, offers, and your orders!</p>
+                    <button onclick="subscribeWindow()">Enable Notifications</button>
+                </div>
+                <script>
+                    function subscribeWindow() {
+                        window.location.href = '/';
+                    }
+                </script>
+            </body>
+        </html>
+    `);
+});
+
+// Subscription endpoint - POST (for programmatic subscription)
 app.post('/subscribe', async (req, res) => {
     try {
         console.log('🔔 Received subscription request');
