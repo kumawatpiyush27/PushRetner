@@ -304,10 +304,21 @@ export default function AdminDashboard() {
                             <div className="section">
                                 <div className="step-header">
                                     <div>
-                                        <div className="section-title" style={{ margin: 0 }}>Step 3: Media & Icon</div>
-                                        <p style={{ color: '#999', fontSize: '13px', marginTop: '5px' }}>Add images and select icon</p>
+                                        <div className="section-title" style={{ margin: 0 }}>Step 3: Media & Link</div>
+                                        <p style={{ color: '#999', fontSize: '13px', marginTop: '5px' }}>Add images, link and icon</p>
                                     </div>
                                     <div className="step-badge">3/4</div>
+                                </div>
+
+                                {/* Link URL */}
+                                <div className="form-group">
+                                    <label>Link URL (Optional)</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="https://www.retne.ai"
+                                        value={formData.link}
+                                        onChange={(e) => setFormData({...formData, link: e.target.value})}
+                                    />
                                 </div>
 
                                 {/* Image Upload */}
