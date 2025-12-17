@@ -21,7 +21,8 @@ async function subscribe(serviceWorkerReg) {
         });
 
         // Send subscription to server
-        await axios.post('/subscribe', subscription);
+        const baseUrl = process.env.REACT_APP_API_URL || '';
+        await axios.post(`${baseUrl}/subscribe`, subscription);
     }
 }
 
