@@ -364,11 +364,14 @@ app.post('/broadcast', async (req, res) => {
         const promises = subscriptions.map(async (sub) => {
             try {
                 // Validate subscription structure
-                if (!sub.endpoint) {
-                    throw new Error('Invalid subscription: missing endpoint');
+                if (!sub.endpoint || typeof sub.endpoint !== 'string') {
+                    throw new Error(`Invalid subscription: endpoint is ${typeof sub.endpoint}`);
                 }
-                if (!sub.keys) {
-                    throw new Error('Invalid subscription: missing keys');
+                if (!sub.keys || typeof sub.keys !== 'object') {
+                    throw new Error(`Invalid subscription: keys is ${typeof sub.keys}`);
+                }
+                if (!sub.keys.p256dh || !sub.keys.auth) {
+                    throw new Error('Invalid subscription: missing p256dh or auth in keys');
                 }
 
                 // Format subscription properly for webPush
@@ -377,7 +380,9 @@ app.post('/broadcast', async (req, res) => {
                     keys: sub.keys
                 };
                 
-                console.log(`📤 Sending to ${sub.endpoint.substring(0, 50)}...`);
+                console.log(`📤 Sending to ${sub.endpoint.substring(0, 50)}...`, {
+                    keysKeys: Object.keys(sub.keys)
+                });
                 
                 await webPush.sendNotification(
                     subscription,

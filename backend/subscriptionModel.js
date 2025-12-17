@@ -29,53 +29,76 @@ initTable();
 
 const SubscriptionModel = {
     create: async (data) => {
+        console.log('💾 Creating subscription with data:', {
+            endpoint: data.endpoint ? data.endpoint.substring(0, 50) + '...' : 'MISSING',
+            keys: data.keys ? 'present' : 'MISSING'
+        });
+        
         const query = `
             INSERT INTO subscriptions (endpoint, expiration_time, keys)
             VALUES ($1, $2, $3)
             RETURNING *;
         `;
-        // Extract the correct fields from the subscription object
+        
         const endpoint = data.endpoint;
         const expirationTime = data.expirationTime || null;
-        // Ensure keys is stored as JSON
-        const keys = typeof data.keys === 'string' ? data.keys : JSON.stringify(data.keys);
+        // Store keys as JSONB - PostgreSQL will handle JSON serialization
+        const keys = data.keys;
         
-        const values = [endpoint, expirationTime, keys];
-        const res = await pool.query(query, values);
-        return {
-            endpoint: res.rows[0].endpoint,
-            expirationTime: res.rows[0].expiration_time,
-            keys: typeof res.rows[0].keys === 'string' ? JSON.parse(res.rows[0].keys) : res.rows[0].keys,
-            _id: res.rows[0].id
-        };
+        try {
+            const res = await pool.query(query, [endpoint, expirationTime, keys]);
+            const row = res.rows[0];
+            
+            console.log('✅ Subscription created, returned keys type:', typeof row.keys);
+            
+            return {
+                endpoint: row.endpoint,
+                expirationTime: row.expiration_time,
+                keys: row.keys, // PostgreSQL returns JSONB as object, not string
+                _id: row.id
+            };
+        } catch (err) {
+            console.error('❌ Error creating subscription:', err.message);
+            throw err;
+        }
     },
 
     find: async () => {
-        const res = await pool.query('SELECT * FROM subscriptions');
-        console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
-        
-        const formatted = res.rows.map(row => {
-            try {
-                const keys = typeof row.keys === 'string' ? JSON.parse(row.keys) : row.keys;
-                console.log(`✅ Subscription ${row.id}:`, {
-                    endpoint: row.endpoint ? row.endpoint.substring(0, 50) + '...' : 'MISSING',
-                    keys: keys ? 'valid' : 'MISSING',
-                    hasP256dh: keys?.p256dh ? 'yes' : 'no',
-                    hasAuth: keys?.auth ? 'yes' : 'no'
-                });
-                return {
-                    endpoint: row.endpoint,
-                    expirationTime: row.expiration_time,
-                    keys: keys,
-                    _id: row.id
-                };
-            } catch (err) {
-                console.error(`❌ Error parsing subscription ${row.id}:`, err.message);
-                return null;
-            }
-        }).filter(sub => sub !== null);
-        
-        return formatted;
+        try {
+            const res = await pool.query('SELECT * FROM subscriptions');
+            console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
+            
+            const formatted = res.rows.map((row, idx) => {
+                try {
+                    // PostgreSQL returns JSONB as JavaScript object
+                    const keys = row.keys;
+                    
+                    console.log(`✅ Subscription ${idx + 1}:`, {
+                        id: row.id,
+                        endpoint: row.endpoint ? row.endpoint.substring(0, 50) + '...' : 'MISSING',
+                        keys: keys ? (typeof keys === 'object' ? 'object' : 'string') : 'MISSING',
+                        hasP256dh: keys?.p256dh ? 'yes' : 'no',
+                        hasAuth: keys?.auth ? 'yes' : 'no'
+                    });
+                    
+                    return {
+                        endpoint: row.endpoint,
+                        expirationTime: row.expiration_time,
+                        keys: keys,
+                        _id: row.id
+                    };
+                } catch (err) {
+                    console.error(`❌ Error processing subscription ${row.id}:`, err.message);
+                    return null;
+                }
+            }).filter(sub => sub !== null);
+            
+            console.log(`✅ Returning ${formatted.length} valid subscriptions`);
+            return formatted;
+        } catch (err) {
+            console.error('❌ Error in find():', err.message);
+            throw err;
+        }
     },
 
     deleteOne: async (filter) => {
