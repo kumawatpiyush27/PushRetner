@@ -842,11 +842,7 @@ app.get('/admin', (req, res) => {
                         buttonDiv.style.display = 'flex';
                         buttonDiv.style.gap = '8px';
                         buttonDiv.style.marginBottom = '10px';
-                        buttonDiv.innerHTML = `
-                            <input type="text" placeholder="Button text" maxlength="20" style="flex: 1; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;">
-                            <input type="text" placeholder="Button URL" style="flex: 1.5; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;">
-                            <button type="button" onclick="removeButton(${buttonCount})" style="background: #ff6b6b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;">✕</button>
-                        `;
+                        buttonDiv.innerHTML = '<input type="text" placeholder="Button text" maxlength="20" style="flex: 1; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;"><input type="text" placeholder="Button URL" style="flex: 1.5; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;"><button type="button" onclick="removeButton(' + buttonCount + ')" style="background: #ff6b6b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;">✕</button>';
                         buttonsList.appendChild(buttonDiv);
                     }
 
