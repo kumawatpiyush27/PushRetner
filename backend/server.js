@@ -343,29 +343,19 @@ app.get('/debug-subscriptions', async (req, res) => {
     }
 });
 
-app.get('/cleanup-subscriptions', async (req, res) => {
+app.delete('/cleanup-subscriptions', async (req, res) => {
     try {
-        const pool = require('pg').Pool;
-        // Delete all subscriptions
-        const result = await SubscriptionModel.deleteAll?.() || 
-            await new Promise((resolve, reject) => {
-                // Fallback: query to delete all
-                const pgPool = new (require('pg')).Pool({
-                    connectionString: process.env.DATABASE_URL,
-                    ssl: { rejectUnauthorized: false }
-                });
-                pgPool.query('DELETE FROM subscriptions', (err, result) => {
-                    pgPool.end();
-                    if (err) reject(err);
-                    else resolve(result);
-                });
-            });
+        console.log('🗑️ Deleting all subscriptions...');
+        const result = await SubscriptionModel.deleteAll();
+        console.log('✅ Deleted:', result?.rowCount, 'subscriptions');
         
         res.json({ 
+            success: true,
             message: 'All subscriptions deleted',
-            deleted: result?.rowCount || 'unknown'
+            deleted: result?.rowCount || 0
         });
     } catch (err) {
+        console.error('❌ Error deleting subscriptions:', err);
         res.status(500).json({ error: err.message });
     }
 });
