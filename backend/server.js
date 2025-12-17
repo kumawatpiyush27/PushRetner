@@ -290,6 +290,7 @@ app.post('/subscribe', async (req, res) => {
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
+            TTL: 24 * 60 * 60, // 24 hours TTL in seconds
         };
 
         console.log('📤 Sending welcome notification...');
@@ -401,6 +402,7 @@ app.get('/test-single-notification', async (req, res) => {
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
+            TTL: 24 * 60 * 60, // 24 hours TTL in seconds
         };
         
         const subscription = {
@@ -473,6 +475,7 @@ app.post('/broadcast', async (req, res) => {
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
+            TTL: 24 * 60 * 60, // 24 hours TTL in seconds
         };
 
         let successCount = 0;
