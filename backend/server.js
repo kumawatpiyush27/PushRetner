@@ -343,8 +343,13 @@ app.get('/debug-subscriptions', async (req, res) => {
     }
 });
 
-app.delete('/cleanup-subscriptions', async (req, res) => {
+app.get('/cleanup-subscriptions', async (req, res) => {
     try {
+        const token = req.query.token;
+        if (token !== 'delete_all_subscriptions_12345') {
+            return res.status(403).json({ error: 'Invalid token' });
+        }
+        
         console.log('🗑️ Deleting all subscriptions...');
         const result = await SubscriptionModel.deleteAll();
         console.log('✅ Deleted:', result?.rowCount, 'subscriptions');
