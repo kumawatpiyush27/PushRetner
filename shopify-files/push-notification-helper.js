@@ -18,8 +18,27 @@ async function subscribeToPushNotifications() {
         const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
             scope: '/apps/push/'
         });
-        // await navigator.serviceWorker.ready; // Skipped due to scope difference
-        console.log('SW Registered (Skipped Ready Wait):', registration);
+        
+        // Wait for the service worker to be active before proceeding
+        console.log('Step 2.5: Waiting for Service Worker to be active...');
+        let serviceWorker = registration.installing || registration.waiting || registration.active;
+        
+        if (serviceWorker) {
+            await new Promise((resolve) => {
+                if (serviceWorker.state === 'activated') {
+                    resolve();
+                } else {
+                    serviceWorker.addEventListener('statechange', function listener() {
+                        if (serviceWorker.state === 'activated') {
+                            serviceWorker.removeEventListener('statechange', listener);
+                            resolve();
+                        }
+                    });
+                }
+            });
+        }
+        
+        console.log('SW Active:', registration);
 
         console.log('Step 3: Creating Subscription with VAPID...');
         // Replace this with your actual VAPID Public Key from Vercel env
@@ -49,12 +68,13 @@ async function subscribeToPushNotifications() {
         }
 
         console.log('Step 5: Success!');
-        alert('✅ Subscribed Successfully! ID saved.');
+        localStorage.setItem('pushNotificationSubscribed', 'true');
+        alert('✅ Subscribed Successfully! You will now receive notifications.');
         return { success: true };
 
     } catch (error) {
         console.error('Subscription Failed:', error);
-        alert('❌ Error details: ' + error.message);
+        alert('❌ Error: ' + error.message + '\n\nPlease try again.');
         return { success: false, message: error.message };
     }
 }
