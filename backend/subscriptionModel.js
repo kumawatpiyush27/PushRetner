@@ -52,12 +52,30 @@ const SubscriptionModel = {
 
     find: async () => {
         const res = await pool.query('SELECT * FROM subscriptions');
-        return res.rows.map(row => ({
-            endpoint: row.endpoint,
-            expirationTime: row.expiration_time,
-            keys: typeof row.keys === 'string' ? JSON.parse(row.keys) : row.keys,
-            _id: row.id
-        }));
+        console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
+        
+        const formatted = res.rows.map(row => {
+            try {
+                const keys = typeof row.keys === 'string' ? JSON.parse(row.keys) : row.keys;
+                console.log(`✅ Subscription ${row.id}:`, {
+                    endpoint: row.endpoint ? row.endpoint.substring(0, 50) + '...' : 'MISSING',
+                    keys: keys ? 'valid' : 'MISSING',
+                    hasP256dh: keys?.p256dh ? 'yes' : 'no',
+                    hasAuth: keys?.auth ? 'yes' : 'no'
+                });
+                return {
+                    endpoint: row.endpoint,
+                    expirationTime: row.expiration_time,
+                    keys: keys,
+                    _id: row.id
+                };
+            } catch (err) {
+                console.error(`❌ Error parsing subscription ${row.id}:`, err.message);
+                return null;
+            }
+        }).filter(sub => sub !== null);
+        
+        return formatted;
     },
 
     deleteOne: async (filter) => {

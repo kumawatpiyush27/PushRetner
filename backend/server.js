@@ -327,7 +327,10 @@ app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url } = req.body;
 
     try {
+        console.log('📢 Broadcast request received:', { title, message });
+        
         const subscriptions = await SubscriptionModel.find();
+        console.log(`📊 Found ${subscriptions.length} subscribers in database`);
 
         if (subscriptions.length === 0) {
             return res.status(404).json({
@@ -336,9 +339,19 @@ app.post('/broadcast', async (req, res) => {
             });
         }
 
+        // Log first subscription to verify structure
+        if (subscriptions.length > 0) {
+            console.log('🔍 First subscription structure:', {
+                endpoint: subscriptions[0].endpoint ? 'exists' : 'missing',
+                keys: subscriptions[0].keys ? 'exists' : 'missing',
+                keysType: typeof subscriptions[0].keys,
+                keysContent: subscriptions[0].keys
+            });
+        }
+
         const options = {
             vapidDetails: {
-                subject: 'mailto:myemail@example.com',
+                subject: 'mailto:admin@zyrajewel.co.in',
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
@@ -346,14 +359,25 @@ app.post('/broadcast', async (req, res) => {
 
         let successCount = 0;
         let failCount = 0;
+        const errors = [];
 
         const promises = subscriptions.map(async (sub) => {
             try {
+                // Validate subscription structure
+                if (!sub.endpoint) {
+                    throw new Error('Invalid subscription: missing endpoint');
+                }
+                if (!sub.keys) {
+                    throw new Error('Invalid subscription: missing keys');
+                }
+
                 // Format subscription properly for webPush
                 const subscription = {
                     endpoint: sub.endpoint,
                     keys: sub.keys
                 };
+                
+                console.log(`📤 Sending to ${sub.endpoint.substring(0, 50)}...`);
                 
                 await webPush.sendNotification(
                     subscription,
@@ -365,11 +389,18 @@ app.post('/broadcast', async (req, res) => {
                     }),
                     options
                 );
+                console.log(`✅ Notification sent successfully`);
                 successCount++;
             } catch (err) {
-                console.log('Failed to send notification to', sub.endpoint, err.message);
+                console.error('❌ Failed to send notification:', {
+                    endpoint: sub.endpoint ? sub.endpoint.substring(0, 50) : 'unknown',
+                    error: err.message,
+                    statusCode: err.statusCode
+                });
+                errors.push(err.message);
                 failCount++;
                 if (err.statusCode === 410 || err.statusCode === 404) {
+                    console.log('🗑️ Removing invalid subscription');
                     await SubscriptionModel.deleteOne({ _id: sub._id });
                 }
             }
@@ -377,18 +408,21 @@ app.post('/broadcast', async (req, res) => {
 
         await Promise.all(promises);
 
+        console.log(`📊 Broadcast complete: ${successCount} sent, ${failCount} failed`);
+
         res.json({
             success: true,
             totalSubscribers: subscriptions.length,
             sent: successCount,
             failed: failCount,
+            errors: errors.slice(0, 5), // Return first 5 errors
             message: `Broadcast sent to ${successCount} subscribers`
         });
     } catch (error) {
-        console.log('Broadcast error:', error);
+        console.error('❌ Broadcast error:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to send broadcast'
+            error: error.message || 'Failed to send broadcast'
         });
     }
 });
