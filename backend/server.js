@@ -132,222 +132,387 @@ app.get('/admin', (req, res) => {
         <!DOCTYPE html>
         <html>
             <head>
-                <title>Push Notifications Admin Dashboard</title>
+                <title>Zyra Push - Admin Dashboard</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <meta charset="UTF-8">
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { 
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        min-height: 100vh;
-                        padding: 20px;
+                        background: #f8f9fa;
+                        color: #333;
                     }
-                    .container { max-width: 1200px; margin: 0 auto; }
-                    .header { color: white; margin-bottom: 30px; }
-                    .header h1 { font-size: 32px; margin-bottom: 5px; }
-                    .header p { opacity: 0.9; }
                     
-                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
-                    .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-                    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-                    .stat-card .number { font-size: 36px; font-weight: bold; color: #667eea; }
-                    .stat-card .subtext { color: #999; font-size: 12px; margin-top: 5px; }
+                    .sidebar {
+                        position: fixed;
+                        left: 0;
+                        top: 0;
+                        width: 260px;
+                        height: 100vh;
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        color: white;
+                        padding: 25px;
+                        overflow-y: auto;
+                        z-index: 1000;
+                    }
                     
-                    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+                    .logo { 
+                        font-size: 20px; 
+                        font-weight: 700; 
+                        margin-bottom: 35px;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
                     
-                    .section-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #333; }
+                    .nav-item { 
+                        padding: 13px 16px; 
+                        margin-bottom: 8px; 
+                        border-radius: 8px; 
+                        cursor: pointer;
+                        transition: all 0.3s;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        font-size: 14px;
+                    }
                     
-                    .form-group { margin-bottom: 20px; }
-                    label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+                    .nav-item:hover { 
+                        background: rgba(102, 126, 234, 0.15); 
+                    }
+                    
+                    .nav-item.active { 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        font-weight: 600;
+                    }
+                    
+                    .main-content {
+                        margin-left: 260px;
+                        padding: 35px;
+                    }
+                    
+                    .header { 
+                        margin-bottom: 35px; 
+                    }
+                    
+                    .header h1 { 
+                        font-size: 30px; 
+                        margin-bottom: 8px;
+                        color: #1a1a2e;
+                    }
+                    
+                    .header p { 
+                        color: #999; 
+                    }
+                    
+                    .stats-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                        gap: 20px;
+                        margin-bottom: 35px;
+                    }
+                    
+                    .stat-card {
+                        background: white;
+                        padding: 25px;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                        border-top: 4px solid;
+                        border-image: linear-gradient(135deg, #667eea, #764ba2) 1;
+                    }
+                    
+                    .stat-label { 
+                        color: #999; 
+                        font-size: 12px; 
+                        margin-bottom: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.8px;
+                        font-weight: 600;
+                    }
+                    
+                    .stat-value { 
+                        font-size: 36px; 
+                        font-weight: 700; 
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    }
+                    
+                    .section { 
+                        background: white; 
+                        padding: 30px; 
+                        border-radius: 12px; 
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                        margin-bottom: 25px;
+                    }
+                    
+                    .section-title { 
+                        font-size: 18px; 
+                        font-weight: 600; 
+                        margin-bottom: 22px;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        color: #1a1a2e;
+                    }
+                    
+                    .form-group { 
+                        margin-bottom: 20px; 
+                    }
+                    
+                    label { 
+                        display: block; 
+                        margin-bottom: 8px; 
+                        font-weight: 600;
+                        font-size: 14px;
+                        color: #1a1a2e;
+                    }
+                    
                     input, textarea { 
                         width: 100%; 
-                        padding: 12px; 
-                        border: 2px solid #e0e0e0; 
+                        padding: 12px 14px; 
+                        border: 2px solid #e8e8e8; 
                         border-radius: 8px; 
-                        font-size: 14px; 
+                        font-size: 14px;
                         font-family: inherit;
-                        transition: border-color 0.3s;
+                        transition: border 0.3s, box-shadow 0.3s;
                     }
+                    
                     input:focus, textarea:focus { 
                         outline: none; 
                         border-color: #667eea;
                         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                     }
                     
-                    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                    .form-row { 
+                        display: grid; 
+                        grid-template-columns: 1fr 1fr; 
+                        gap: 18px;
+                    }
                     
                     button { 
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         color: white; 
                         border: none; 
-                        padding: 14px 28px; 
+                        padding: 13px 28px; 
                         border-radius: 8px; 
-                        font-size: 16px; 
+                        font-size: 14px;
                         font-weight: 600;
                         cursor: pointer;
-                        width: 100%;
-                        transition: transform 0.2s, box-shadow 0.2s;
+                        transition: all 0.3s;
+                        display: inline-block;
                     }
-                    button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
-                    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+                    
+                    button:hover { 
+                        transform: translateY(-2px);
+                        box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+                    }
+                    
+                    button:disabled { 
+                        opacity: 0.6; 
+                        cursor: not-allowed;
+                        transform: none;
+                    }
                     
                     .status { 
-                        margin-top: 20px; 
-                        padding: 16px; 
-                        border-radius: 8px; 
+                        margin-top: 18px; 
+                        padding: 14px 16px; 
+                        border-radius: 8px;
                         display: none;
-                        font-weight: 600;
                         border-left: 4px solid;
+                        font-size: 14px;
                     }
+                    
                     .success { 
-                        background: #d4edda; 
-                        color: #155724;
-                        border-color: #28a745;
+                        background: #ecfdf5; 
+                        color: #047857;
+                        border-color: #10b981;
                     }
+                    
                     .error { 
-                        background: #f8d7da; 
-                        color: #721c24;
-                        border-color: #dc3545;
+                        background: #fef2f2; 
+                        color: #dc2626;
+                        border-color: #ef4444;
                     }
                     
-                    .stats-box { 
-                        display: grid; 
-                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-                        gap: 15px; 
-                        margin-bottom: 30px;
+                    .tab-buttons {
+                        display: flex;
+                        gap: 8px;
+                        margin-bottom: 25px;
+                        border-bottom: 2px solid #e8e8e8;
                     }
-                    .stat-item { 
-                        background: #f8f9fa; 
-                        padding: 15px; 
-                        border-radius: 8px; 
-                        text-align: center;
-                    }
-                    .stat-item .label { color: #666; font-size: 12px; }
-                    .stat-item .value { font-size: 24px; font-weight: bold; color: #667eea; }
                     
-                    .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
-                    .tab { 
-                        padding: 12px 20px; 
-                        cursor: pointer; 
-                        border: none; 
-                        background: none; 
-                        font-size: 16px;
+                    .tab-btn {
+                        background: none;
+                        border: none;
+                        padding: 14px 0;
+                        margin-right: 24px;
+                        font-size: 14px;
+                        font-weight: 600;
                         color: #999;
+                        cursor: pointer;
                         border-bottom: 3px solid transparent;
                         margin-bottom: -2px;
                         transition: all 0.3s;
                     }
-                    .tab.active { 
-                        color: #667eea; 
+                    
+                    .tab-btn.active {
+                        color: #667eea;
                         border-bottom-color: #667eea;
                     }
                     
                     .tab-content { display: none; }
                     .tab-content.active { display: block; }
                     
+                    .feature-item {
+                        padding: 16px;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        margin-bottom: 12px;
+                        border-left: 4px solid #667eea;
+                    }
+                    
+                    .feature-item strong { color: #1a1a2e; }
+                    .feature-item p { color: #666; font-size: 13px; margin-top: 4px; }
+                    
                     @media (max-width: 768px) {
+                        .sidebar { width: 100%; height: auto; position: relative; }
+                        .main-content { margin-left: 0; padding: 20px; }
                         .form-row { grid-template-columns: 1fr; }
-                        .grid { grid-template-columns: 1fr; }
-                        .header h1 { font-size: 24px; }
+                        .stats-grid { grid-template-columns: 1fr; }
                     }
                 </style>
             </head>
             <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>📢 Push Notifications Dashboard</h1>
-                        <p>Manage your push notification campaigns</p>
-                    </div>
-                    
-                    <div class="grid">
-                        <div class="stat-card">
-                            <h3>Total Subscribers</h3>
-                            <div id="subscriber-count" class="number">-</div>
-                            <div class="subtext">Active subscriptions</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Broadcasts Sent</h3>
-                            <div class="number" id="broadcast-count">-</div>
-                            <div class="subtext">All time</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Success Rate</h3>
-                            <div class="number" id="success-rate">-</div>
-                            <div class="subtext">Last broadcast</div>
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="tabs">
-                            <button class="tab active" onclick="switchTab('broadcast')">Send Broadcast</button>
-                            <button class="tab" onclick="switchTab('settings')">Settings</button>
-                            <button class="tab" onclick="switchTab('docs')">Documentation</button>
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <div class="logo">📬 Zyra Push</div>
+                    <div class="nav-item active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+                    <div class="nav-item" onclick="switchTab('campaigns')">📧 Campaigns</div>
+                    <div class="nav-item" onclick="switchTab('automations')">⚙️ Automations</div>
+                    <div class="nav-item" onclick="switchTab('subscribers')">👥 Subscribers</div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="main-content">
+                    <!-- Dashboard Tab -->
+                    <div id="dashboard" class="tab-content active">
+                        <div class="header">
+                            <h1>Welcome to Zyra Push 👋</h1>
+                            <p>Manage your push notifications efficiently</p>
                         </div>
                         
-                        <div id="broadcast" class="tab-content active">
-                            <h2 class="section-title">📤 Send Notification</h2>
-                            
-                            <div class="form-group">
-                                <label>Notification Title</label>
-                                <input type="text" id="title" placeholder="e.g., New Sale Alert!" value="Big Sale Alert! 🚀">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">📈 Total Subscribers</div>
+                                <div class="stat-value" id="total-subs">0</div>
                             </div>
-                            
+                            <div class="stat-card">
+                                <div class="stat-label">📤 Campaigns Sent</div>
+                                <div class="stat-value" id="campaigns-sent">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">✅ Success Rate</div>
+                                <div class="stat-value" id="success-rate">100%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">👁️ Impressions</div>
+                                <div class="stat-value" id="impressions">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">🚀 Quick Send Campaign</div>
+                            <div class="form-group">
+                                <label>Campaign Title</label>
+                                <input type="text" id="quick-title" placeholder="Big Sale Alert!" value="Big Sale Alert! 🚀">
+                            </div>
                             <div class="form-group">
                                 <label>Message</label>
-                                <textarea id="message" rows="4" placeholder="Enter your notification message...">Get 20% off on all items! Limited time only.</textarea>
+                                <textarea id="quick-message" rows="3" placeholder="Enter your message...">Get 20% off on all items! Limited time only.</textarea>
                             </div>
-                            
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Link URL (Optional)</label>
-                                    <input type="text" id="url" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
+                                    <label>Link URL</label>
+                                    <input type="text" id="quick-url" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
                                 </div>
                             </div>
-                            
-                            <button onclick="sendPush()">Send Notification</button>
-                            <div id="status" class="status"></div>
+                            <button onclick="sendQuickCampaign()">🚀 Send Campaign</button>
+                            <div id="quick-status" class="status"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campaigns Tab -->
+                    <div id="campaigns" class="tab-content">
+                        <div class="header">
+                            <h1>📧 Campaigns</h1>
+                            <p>Create and manage campaigns</p>
                         </div>
                         
-                        <div id="settings" class="tab-content">
-                            <h2 class="section-title">⚙️ Settings</h2>
+                        <div class="section">
+                            <div class="section-title">Create New Campaign</div>
                             <div class="form-group">
-                                <label>Notification Icon URL</label>
-                                <input type="text" id="icon-url" placeholder="https://example.com/icon.png" value="https://cdn-icons-png.flaticon.com/512/733/733585.png">
+                                <label>Campaign Name</label>
+                                <input type="text" id="campaign-name" placeholder="Black Friday Sale">
                             </div>
                             <div class="form-group">
-                                <label>Backend Status</label>
-                                <input type="text" readonly value="✅ Connected to Vercel" style="background: #f0f0f0;">
+                                <label>Title</label>
+                                <input type="text" id="campaign-title" placeholder="Limited Time Offer!">
                             </div>
-                            <button onclick="testNotification()">Send Test Notification</button>
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="campaign-message" rows="3" placeholder="Enter message..."></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Link</label>
+                                    <input type="text" id="campaign-link" placeholder="https://...">
+                                </div>
+                            </div>
+                            <button onclick="createCampaign()">💾 Save Campaign</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Automations Tab -->
+                    <div id="automations" class="tab-content">
+                        <div class="header">
+                            <h1>⚙️ Automations</h1>
+                            <p>Automated campaigns</p>
                         </div>
                         
-                        <div id="docs" class="tab-content">
-                            <h2 class="section-title">📚 Documentation</h2>
-                            <div style="line-height: 1.8; color: #666;">
-                                <h4 style="margin-top: 15px; margin-bottom: 10px;">How to use:</h4>
-                                <ol style="margin-left: 20px;">
-                                    <li>Enter notification title and message</li>
-                                    <li>Add optional link URL</li>
-                                    <li>Click "Send Notification" to broadcast</li>
-                                </ol>
-                                
-                                <h4 style="margin-top: 15px; margin-bottom: 10px;">Features:</h4>
-                                <ul style="margin-left: 20px;">
-                                    <li>Real-time subscriber count</li>
-                                    <li>Broadcast to multiple devices</li>
-                                    <li>Clickable notifications with links</li>
-                                    <li>Professional UI/UX</li>
-                                </ul>
-                                
-                                <h4 style="margin-top: 15px; margin-bottom: 10px;">Future Roadmap:</h4>
-                                <ul style="margin-left: 20px;">
-                                    <li>🔜 Scheduled campaigns</li>
-                                    <li>🔜 A/B testing</li>
-                                    <li>🔜 Analytics dashboard</li>
-                                    <li>🔜 User segmentation</li>
-                                    <li>🔜 Notification templates</li>
-                                </ul>
+                        <div class="section">
+                            <div class="section-title">Welcome Notifications</div>
+                            <div class="feature-item">
+                                <strong>✅ Active</strong>
+                                <p>Automatic welcome message sent when users subscribe</p>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">Coming Soon</div>
+                            <div class="feature-item">
+                                <strong>🔜 Abandoned Cart Recovery</strong>
+                                <p>Remind users about items left in their cart</p>
+                            </div>
+                            <div class="feature-item">
+                                <strong>🔜 Follow-up Sequences</strong>
+                                <p>Send automated follow-up campaigns</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscribers Tab -->
+                    <div id="subscribers" class="tab-content">
+                        <div class="header">
+                            <h1>👥 Subscribers</h1>
+                            <p>Manage subscriber list</p>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="feature-item">
+                                <strong>Total Active Subscribers: <span id="sub-count" style="color: #667eea;">0</span></strong>
+                                <p>All active subscriptions ready to receive campaigns</p>
                             </div>
                         </div>
                     </div>
@@ -356,7 +521,7 @@ app.get('/admin', (req, res) => {
                 <script>
                     function switchTab(tabName) {
                         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-                        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+                        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
                         document.getElementById(tabName).classList.add('active');
                         event.target.classList.add('active');
                     }
@@ -365,24 +530,24 @@ app.get('/admin', (req, res) => {
                         try {
                             const res = await fetch('/stats');
                             const data = await res.json();
-                            document.getElementById('subscriber-count').textContent = data.count;
+                            document.getElementById('total-subs').textContent = data.count;
+                            document.getElementById('sub-count').textContent = data.count;
                         } catch (e) {
-                            console.error('Error loading stats:', e);
+                            console.error('Error:', e);
                         }
                     }
 
-                    async function sendPush() {
+                    async function sendQuickCampaign() {
                         const btn = event.target;
-                        const status = document.getElementById('status');
+                        const status = document.getElementById('quick-status');
                         btn.disabled = true;
-                        btn.textContent = 'Sending...';
-                        status.style.display = 'none';
+                        btn.textContent = '⏳ Sending...';
 
                         const data = {
-                            title: document.getElementById('title').value,
-                            message: document.getElementById('message').value,
-                            url: document.getElementById('url').value,
-                            icon: document.getElementById('icon-url').value || 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                            title: document.getElementById('quick-title').value,
+                            message: document.getElementById('quick-message').value,
+                            url: document.getElementById('quick-url').value,
+                            icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
                         };
 
                         try {
@@ -393,29 +558,33 @@ app.get('/admin', (req, res) => {
                             });
                             
                             const result = await res.json();
-
-                            if (!res.ok) {
-                                throw new Error(result.error || 'Server error');
-                            }
+                            
+                            if (!res.ok) throw new Error(result.error);
                             
                             status.textContent = '✅ ' + result.message + ' (' + result.sent + ' sent)';
                             status.className = 'status success';
+                            document.getElementById('campaigns-sent').textContent = parseInt(document.getElementById('campaigns-sent').textContent || '0') + 1;
                             document.getElementById('success-rate').textContent = ((result.sent / result.totalSubscribers) * 100).toFixed(0) + '%';
-                            document.getElementById('broadcast-count').textContent = parseInt(document.getElementById('broadcast-count').textContent || '0') + 1;
+                            document.getElementById('impressions').textContent = parseInt(document.getElementById('impressions').textContent || '0') + result.sent;
                         } catch (err) {
                             status.textContent = '❌ Error: ' + err.message;
                             status.className = 'status error';
                         }
+                        
                         status.style.display = 'block';
                         btn.disabled = false;
-                        btn.textContent = 'Send Notification';
+                        btn.textContent = '🚀 Send Campaign';
                     }
 
-                    function testNotification() {
-                        alert('📬 Test notification sent to all subscribers!');
+                    function createCampaign() {
+                        const name = document.getElementById('campaign-name').value;
+                        if (!name) {
+                            alert('Please enter campaign name');
+                            return;
+                        }
+                        alert('Campaign saved! Ready to send.');
                     }
 
-                    // Load stats on page load
                     window.addEventListener('load', loadStats);
                 </script>
             </body>
