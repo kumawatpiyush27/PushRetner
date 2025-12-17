@@ -353,6 +353,66 @@ app.get('/debug-vapid', (req, res) => {
     });
 });
 
+app.get('/test-single-notification', async (req, res) => {
+    try {
+        const subscriptions = await SubscriptionModel.find();
+        
+        if (subscriptions.length === 0) {
+            return res.json({ error: 'No subscriptions found' });
+        }
+        
+        const sub = subscriptions[0];
+        console.log('🧪 Testing notification to first subscription:', {
+            id: sub._id,
+            endpoint: sub.endpoint ? sub.endpoint.substring(0, 50) + '...' : 'missing',
+            keys: sub.keys ? Object.keys(sub.keys) : 'missing'
+        });
+        
+        const options = {
+            vapidDetails: {
+                subject: 'mailto:admin@zyrajewel.co.in',
+                publicKey: process.env.PUBLIC_KEY,
+                privateKey: process.env.PRIVATE_KEY,
+            },
+        };
+        
+        const subscription = {
+            endpoint: sub.endpoint,
+            keys: sub.keys
+        };
+        
+        console.log('📤 About to send with subscription:', subscription);
+        
+        try {
+            await webPush.sendNotification(
+                subscription,
+                JSON.stringify({
+                    title: 'Test Notification',
+                    description: 'This is a test',
+                    image: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    url: ''
+                }),
+                options
+            );
+            res.json({ success: true, message: 'Test notification sent' });
+        } catch (pushErr) {
+            console.error('❌ webPush error:', {
+                message: pushErr.message,
+                statusCode: pushErr.statusCode,
+                body: pushErr.body,
+                headers: pushErr.headers
+            });
+            res.status(500).json({
+                error: pushErr.message,
+                statusCode: pushErr.statusCode,
+                body: pushErr.body
+            });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Broadcast notification to all subscribers
 app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url } = req.body;
