@@ -1128,7 +1128,14 @@ app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url, image, buttons } = req.body;
 
     try {
-        console.log('📢 Broadcast request received:', { title, message });
+        console.log('📢 Broadcast request received:', { 
+            title, 
+            message,
+            hasImage: !!image,
+            imageLength: image ? image.length : 0,
+            buttonsCount: buttons ? buttons.length : 0,
+            buttons: buttons
+        });
         
         const subscriptions = await SubscriptionModel.find();
         console.log(`📊 Found ${subscriptions.length} subscribers in database`);

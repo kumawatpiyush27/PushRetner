@@ -108,18 +108,22 @@ export default function AdminDashboard() {
             return;
         }
 
+        const payload = {
+            title: selectedIcon + ' ' + formData.title,
+            message: formData.message,
+            url: formData.link,
+            image: image,
+            buttons: buttons.map(btn => ({ text: btn.text, url: btn.url })),
+            icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+        };
+
+        console.log('📤 Sending campaign with payload:', payload);
+
         try {
             const res = await fetch('/broadcast', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: selectedIcon + ' ' + formData.title,
-                    message: formData.message,
-                    url: formData.link,
-                    image: image,
-                    buttons: buttons,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
-                })
+                body: JSON.stringify(payload)
             });
 
             const result = await res.json();
