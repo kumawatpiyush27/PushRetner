@@ -1206,15 +1206,31 @@ app.post('/broadcast', async (req, res) => {
                     keysKeys: Object.keys(sub.keys)
                 });
                 
+                // Build notification payload
+                const notificationPayload = {
+                    title: title || 'Notification',
+                    body: message || 'You have a new notification',
+                    icon: image || icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    badge: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    tag: 'notification-' + Date.now(),
+                    requireInteraction: buttons && buttons.length > 0,
+                    data: {
+                        url: url || '/',
+                        buttons: buttons || []
+                    }
+                };
+
+                // Add actions if buttons exist
+                if (buttons && buttons.length > 0) {
+                    notificationPayload.actions = buttons.slice(0, 2).map((btn, idx) => ({
+                        action: btn.url || '/',
+                        title: btn.text || 'Action ' + (idx + 1)
+                    }));
+                }
+
                 await webPush.sendNotification(
                     subscription,
-                    JSON.stringify({
-                        title: title || 'Notification',
-                        description: message || 'You have a new notification',
-                        image: image || icon || 'https://cdn2.vectorstock.com/i/thumb-large/94/66/emoji-smile-icon-symbol-smiley-face-vector-26119466.jpg',
-                        buttons: buttons || [],
-                        url: url || ''
-                    }),
+                    JSON.stringify(notificationPayload),
                     options
                 );
                 console.log(`✅ Notification sent successfully`);
@@ -1262,6 +1278,48 @@ app.post('/broadcast', async (req, res) => {
             errorName: error.name,
             errorDetails: error.toString()
         });
+    }
+});
+
+// Test single notification with full data
+app.post('/test-notification', async (req, res) => {
+    const { title, message, image, buttons } = req.body;
+    
+    try {
+        const subscriptions = await SubscriptionModel.find();
+        if (subscriptions.length === 0) {
+            return res.json({ error: 'No subscribers' });
+        }
+
+        const subscription = subscriptions[0];
+        const options = {
+            vapidDetails: {
+                subject: 'mailto:admin@zyrajewel.co.in',
+                publicKey: process.env.PUBLIC_KEY,
+                privateKey: process.env.PRIVATE_KEY,
+            }
+        };
+
+        const payload = {
+            title: title || 'Test Title',
+            description: message || 'Test Message',
+            image: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+            buttons: buttons || [{ text: 'Test Button', url: 'https://zyrajewel.co.in' }],
+            url: 'https://zyrajewel.co.in'
+        };
+
+        console.log('🧪 Sending test notification with payload:', payload);
+
+        await webPush.sendNotification(
+            { endpoint: subscription.endpoint, keys: subscription.keys },
+            JSON.stringify(payload),
+            options
+        );
+
+        res.json({ success: true, payload });
+    } catch (error) {
+        console.error('Test notification error:', error.message);
+        res.status(500).json({ error: error.message });
     }
 });
 

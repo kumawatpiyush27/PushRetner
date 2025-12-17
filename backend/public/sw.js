@@ -8,39 +8,28 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('push', async function (event) {
     try {
         const message = await event.data.json();
-        let { title, description, image, url, buttons } = message;
+        let { title, body, icon, badge, actions, data, requireInteraction, tag } = message;
 
         console.log('🔔 Push notification received:', {
             title,
-            description,
-            hasImage: !!image,
-            buttonsCount: buttons ? buttons.length : 0,
-            buttons: buttons
+            body,
+            hasIcon: !!icon,
+            actionsCount: actions ? actions.length : 0,
+            actions: actions
         });
 
-        // Build actions from buttons array
-        const actions = (buttons && buttons.length > 0) 
-            ? buttons.map((btn, idx) => ({
-                action: `button_${idx}_${btn.url}`,
-                title: btn.text || 'Action ' + (idx + 1)
-            }))
-            : [];
-
         const notificationOptions = {
-            body: description,
-            icon: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-            badge: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+            body: body || 'You have a new notification',
+            icon: icon,
+            badge: badge,
             vibrate: [200, 100, 200],
-            tag: 'notification-' + Date.now(),
-            requireInteraction: false,
-            data: {
-                url: url || '/',
-                buttons: buttons || []
-            }
+            tag: tag || 'notification-' + Date.now(),
+            requireInteraction: requireInteraction || false,
+            data: data || {}
         };
 
-        // Add actions if buttons exist
-        if (actions.length > 0) {
+        // Add actions if they exist
+        if (actions && actions.length > 0) {
             notificationOptions.actions = actions;
             console.log('✅ Added actions:', actions);
         }
