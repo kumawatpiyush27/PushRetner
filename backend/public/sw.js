@@ -1,3 +1,6 @@
+// Service Worker for Shopify Push Notifications
+// Place this file in your Shopify theme: Assets > sw.js
+
 self.addEventListener('activate', function (event) {
     console.log('Push notification service worker activated');
 });
@@ -37,11 +40,13 @@ self.addEventListener('push', async function (event) {
     }
 });
 
+// Handle notification click
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
 
     if (event.action === 'open' || !event.action) {
         const urlToOpen = event.notification.data.url || '/';
+
         event.waitUntil(
             clients.openWindow(urlToOpen)
         );
