@@ -10,18 +10,21 @@ export default function AdminDashboard() {
     const [selectedIcon, setSelectedIcon] = useState('🔔');
     const [buttons, setButtons] = useState([]);
     const [image, setImage] = useState(null);
+    const [templates, setTemplates] = useState([]);
+    const [sentCampaigns, setSentCampaigns] = useState([]);
     
     const [formData, setFormData] = useState({
         name: '',
         title: '',
         message: '',
-        link: 'https://zyrajewel.co.in'
+        link: 'https://www.retne.ai'
     });
 
     const icons = ['🔔', '🎉', '💰', '⭐', '🎁', '🚀', '❤️', '✅'];
 
     useEffect(() => {
         loadStats();
+        loadTemplates();
     }, []);
 
     async function loadStats() {
@@ -32,6 +35,46 @@ export default function AdminDashboard() {
         } catch (e) {
             console.error('Error:', e);
         }
+    }
+
+    function loadTemplates() {
+        const saved = localStorage.getItem('templates');
+        if (saved) setTemplates(JSON.parse(saved));
+    }
+
+    function saveTemplate() {
+        const templateName = prompt('Enter template name:');
+        if (!templateName) return;
+
+        const newTemplate = {
+            id: Date.now(),
+            name: templateName,
+            icon: selectedIcon,
+            title: formData.title,
+            message: formData.message,
+            link: formData.link,
+            image: image,
+            buttons: buttons
+        };
+
+        const updatedTemplates = [...templates, newTemplate];
+        setTemplates(updatedTemplates);
+        localStorage.setItem('templates', JSON.stringify(updatedTemplates));
+        alert('✅ Template saved: ' + templateName);
+    }
+
+    function loadTemplate(template) {
+        setFormData({
+            name: template.name,
+            title: template.title,
+            message: template.message,
+            link: template.link
+        });
+        setSelectedIcon(template.icon);
+        setImage(template.image);
+        setButtons(template.buttons);
+        setCurrentStep(1);
+        setActiveTab('campaigns');
     }
 
     function handleImageUpload(event) {
@@ -80,11 +123,24 @@ export default function AdminDashboard() {
             const result = await res.json();
             if (!res.ok) throw new Error(result.error);
 
+            // Save to sent campaigns
+            const newCampaign = {
+                id: Date.now(),
+                name: formData.name,
+                icon: selectedIcon,
+                title: formData.title,
+                message: formData.message,
+                link: formData.link,
+                sent: result.sent,
+                timestamp: new Date().toLocaleString()
+            };
+            setSentCampaigns([newCampaign, ...sentCampaigns]);
+
             alert('✅ Campaign sent to ' + result.sent + ' subscribers!');
             setCampaigns(campaigns + 1);
             
             // Reset form
-            setFormData({ name: '', title: '', message: '', link: 'https://zyrajewel.co.in' });
+            setFormData({ name: '', title: '', message: '', link: 'https://www.retne.ai' });
             setButtons([]);
             setImage(null);
             setSelectedIcon('🔔');
@@ -367,25 +423,154 @@ export default function AdminDashboard() {
                             <div className="section">
                                 <div className="step-header">
                                     <div>
-                                        <div className="section-title" style={{ margin: 0 }}>Step 4: Ready to Send</div>
-                                        <p style={{ color: '#999', fontSize: '13px', marginTop: '5px' }}>Final confirmation</p>
+                                        <div className="section-title" style={{ margin: 0 }}>Step 4: Review & Send</div>
+                                        <p style={{ color: '#999', fontSize: '13px', marginTop: '5px' }}>Final preview before sending</p>
                                     </div>
                                     <div className="step-badge" style={{ background: '#667eea', color: 'white' }}>4/4</div>
                                 </div>
 
+                                {/* Campaign Preview */}
+                                <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '12px', marginBottom: '25px' }}>
+                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '15px', fontWeight: 600 }}>📱 Desktop Preview:</p>
+                                    <div style={{
+                                        background: 'white',
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '8px',
+                                        padding: '20px',
+                                        maxWidth: '500px'
+                                    }}>
+                                        {image && (
+                                            <img src={image} alt="campaign" style={{ width: '100%', borderRadius: '8px', marginBottom: '12px', maxHeight: '200px', objectFit: 'cover' }} />
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                            <span style={{ fontSize: '28px' }}>{selectedIcon}</span>
+                                            <div style={{ flex: 1 }}>
+                                                <strong style={{ display: 'block', fontSize: '16px', marginBottom: '6px', color: '#1a1a2e' }}>
+                                                    {formData.title}
+                                                </strong>
+                                                <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: '1.5' }}>
+                                                    {formData.message}
+                                                </p>
+                                                {buttons.length > 0 && (
+                                                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {buttons.map(btn => (
+                                                            <a
+                                                                key={btn.id}
+                                                                href={btn.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{
+                                                                    padding: '8px 14px',
+                                                                    background: '#667eea',
+                                                                    color: 'white',
+                                                                    borderRadius: '6px',
+                                                                    textDecoration: 'none',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 600
+                                                                }}
+                                                            >
+                                                                {btn.text}
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Campaign Info */}
                                 <div style={{ background: '#ecfdf5', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #10b981' }}>
                                     <p style={{ margin: 0, color: '#047857', fontSize: '14px' }}>
                                         <strong>✅ Ready to send</strong><br />
-                                        <span style={{ fontSize: '12px' }}>This campaign will be sent to <strong>{subscribers}</strong> subscribers</span>
+                                        <span style={{ fontSize: '12px' }}>
+                                            Campaign: <strong>{formData.name}</strong><br/>
+                                            Recipients: <strong>{subscribers}</strong> subscribers<br/>
+                                            Link: <strong style={{ wordBreak: 'break-all' }}>{formData.link}</strong>
+                                        </span>
                                     </p>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '25px' }}>
-                                    <button className="btn-secondary" onClick={() => setCurrentStep(3)}>← Back</button>
-                                    <button className="btn-success" onClick={submitCampaign}>🚀 Send Campaign</button>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '25px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button className="btn-secondary" onClick={() => setCurrentStep(3)}>← Back</button>
+                                        <button className="btn-primary" onClick={saveTemplate} style={{ background: '#667eea' }}>💾 Save Template</button>
+                                    </div>
+                                    <button className="btn-success" onClick={submitCampaign}>🚀 Send to All</button>
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Templates Tab */}
+                {activeTab === 'campaigns' && currentStep === 1 && templates.length > 0 && (
+                    <div className="section" style={{ marginBottom: '25px' }}>
+                        <div className="section-title">📋 Saved Templates</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
+                            {templates.map(template => (
+                                <div key={template.id} style={{
+                                    background: '#f8f9fa',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e0e0e0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s',
+                                    hover: { borderColor: '#667eea' }
+                                }}>
+                                    <strong style={{ display: 'block', marginBottom: '8px', color: '#1a1a2e' }}>
+                                        {template.icon} {template.name}
+                                    </strong>
+                                    <p style={{ fontSize: '12px', color: '#666', margin: '0 0 12px 0', lineHeight: '1.4' }}>
+                                        {template.title}
+                                    </p>
+                                    <button
+                                        onClick={() => loadTemplate(template)}
+                                        style={{
+                                            background: '#667eea',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        Use Template
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Sent Campaigns Tab */}
+                {activeTab === 'campaigns' && currentStep === 1 && sentCampaigns.length > 0 && (
+                    <div className="section" style={{ marginBottom: '25px' }}>
+                        <div className="section-title">📤 Recently Sent</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
+                            {sentCampaigns.map(camp => (
+                                <div key={camp.id} style={{
+                                    background: '#ecfdf5',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    borderLeft: '4px solid #10b981'
+                                }}>
+                                    <strong style={{ display: 'block', marginBottom: '8px', color: '#1a1a2e' }}>
+                                        {camp.icon} {camp.name}
+                                    </strong>
+                                    <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px 0' }}>
+                                        {camp.title}
+                                    </p>
+                                    <div style={{ fontSize: '11px', color: '#999' }}>
+                                        ✅ Sent to {camp.sent} subscribers<br/>
+                                        {camp.timestamp}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
