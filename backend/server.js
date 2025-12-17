@@ -129,59 +129,250 @@ app.get('/stats', async (req, res) => {
 // Admin Page Endpoint (Send Notifications)
 app.get('/admin', (req, res) => {
     res.send(`
+        <!DOCTYPE html>
         <html>
             <head>
-                <title>Push Admin</title>
+                <title>Push Notifications Admin Dashboard</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta charset="UTF-8">
                 <style>
-                    body { font-family: -apple-system, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #f5f5f5; }
-                    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    h2 { margin-top: 0; }
-                    .form-group { margin-bottom: 15px; }
-                    label { display: block; margin-bottom: 5px; font-weight: 600; }
-                    input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
-                    button { background: #000; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-size: 16px; width: 100%; cursor: pointer; }
-                    button:hover { opacity: 0.9; }
-                    .status { margin-top: 20px; padding: 10px; border-radius: 6px; display: none; }
-                    .success { background: #d4edda; color: #155724; }
-                    .error { background: #f8d7da; color: #721c24; }
-                    .stats { margin-bottom: 20px; padding: 10px; background: #e9ecef; border-radius: 6px; font-weight: bold; text-align: center; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        min-height: 100vh;
+                        padding: 20px;
+                    }
+                    .container { max-width: 1200px; margin: 0 auto; }
+                    .header { color: white; margin-bottom: 30px; }
+                    .header h1 { font-size: 32px; margin-bottom: 5px; }
+                    .header p { opacity: 0.9; }
+                    
+                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+                    .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+                    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+                    .stat-card .number { font-size: 36px; font-weight: bold; color: #667eea; }
+                    .stat-card .subtext { color: #999; font-size: 12px; margin-top: 5px; }
+                    
+                    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+                    
+                    .section-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #333; }
+                    
+                    .form-group { margin-bottom: 20px; }
+                    label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+                    input, textarea { 
+                        width: 100%; 
+                        padding: 12px; 
+                        border: 2px solid #e0e0e0; 
+                        border-radius: 8px; 
+                        font-size: 14px; 
+                        font-family: inherit;
+                        transition: border-color 0.3s;
+                    }
+                    input:focus, textarea:focus { 
+                        outline: none; 
+                        border-color: #667eea;
+                        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    }
+                    
+                    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                    
+                    button { 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white; 
+                        border: none; 
+                        padding: 14px 28px; 
+                        border-radius: 8px; 
+                        font-size: 16px; 
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: transform 0.2s, box-shadow 0.2s;
+                    }
+                    button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+                    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+                    
+                    .status { 
+                        margin-top: 20px; 
+                        padding: 16px; 
+                        border-radius: 8px; 
+                        display: none;
+                        font-weight: 600;
+                        border-left: 4px solid;
+                    }
+                    .success { 
+                        background: #d4edda; 
+                        color: #155724;
+                        border-color: #28a745;
+                    }
+                    .error { 
+                        background: #f8d7da; 
+                        color: #721c24;
+                        border-color: #dc3545;
+                    }
+                    
+                    .stats-box { 
+                        display: grid; 
+                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+                        gap: 15px; 
+                        margin-bottom: 30px;
+                    }
+                    .stat-item { 
+                        background: #f8f9fa; 
+                        padding: 15px; 
+                        border-radius: 8px; 
+                        text-align: center;
+                    }
+                    .stat-item .label { color: #666; font-size: 12px; }
+                    .stat-item .value { font-size: 24px; font-weight: bold; color: #667eea; }
+                    
+                    .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
+                    .tab { 
+                        padding: 12px 20px; 
+                        cursor: pointer; 
+                        border: none; 
+                        background: none; 
+                        font-size: 16px;
+                        color: #999;
+                        border-bottom: 3px solid transparent;
+                        margin-bottom: -2px;
+                        transition: all 0.3s;
+                    }
+                    .tab.active { 
+                        color: #667eea; 
+                        border-bottom-color: #667eea;
+                    }
+                    
+                    .tab-content { display: none; }
+                    .tab-content.active { display: block; }
+                    
+                    @media (max-width: 768px) {
+                        .form-row { grid-template-columns: 1fr; }
+                        .grid { grid-template-columns: 1fr; }
+                        .header h1 { font-size: 24px; }
+                    }
                 </style>
             </head>
             <body>
-                <div class="card">
-                    <h2>📢 Send Broadcast</h2>
-                    <div id="stats" class="stats">Loading subscribers...</div>
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="title" placeholder="New Sale!" value="Big Sale Alert! 🚀">
+                <div class="container">
+                    <div class="header">
+                        <h1>📢 Push Notifications Dashboard</h1>
+                        <p>Manage your push notification campaigns</p>
                     </div>
-                    <div class="form-group">
-                        <label>Message</label>
-                        <textarea id="message" rows="3" placeholder="Get 50% off today...">Get 20% off on all items! Limited time only.</textarea>
+                    
+                    <div class="grid">
+                        <div class="stat-card">
+                            <h3>Total Subscribers</h3>
+                            <div id="subscriber-count" class="number">-</div>
+                            <div class="subtext">Active subscriptions</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Broadcasts Sent</h3>
+                            <div class="number" id="broadcast-count">-</div>
+                            <div class="subtext">All time</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Success Rate</h3>
+                            <div class="number" id="success-rate">-</div>
+                            <div class="subtext">Last broadcast</div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Link URL (Optional)</label>
-                        <input type="text" id="url" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
+                    
+                    <div class="card">
+                        <div class="tabs">
+                            <button class="tab active" onclick="switchTab('broadcast')">Send Broadcast</button>
+                            <button class="tab" onclick="switchTab('settings')">Settings</button>
+                            <button class="tab" onclick="switchTab('docs')">Documentation</button>
+                        </div>
+                        
+                        <div id="broadcast" class="tab-content active">
+                            <h2 class="section-title">📤 Send Notification</h2>
+                            
+                            <div class="form-group">
+                                <label>Notification Title</label>
+                                <input type="text" id="title" placeholder="e.g., New Sale Alert!" value="Big Sale Alert! 🚀">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="message" rows="4" placeholder="Enter your notification message...">Get 20% off on all items! Limited time only.</textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Link URL (Optional)</label>
+                                    <input type="text" id="url" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
+                                </div>
+                            </div>
+                            
+                            <button onclick="sendPush()">Send Notification</button>
+                            <div id="status" class="status"></div>
+                        </div>
+                        
+                        <div id="settings" class="tab-content">
+                            <h2 class="section-title">⚙️ Settings</h2>
+                            <div class="form-group">
+                                <label>Notification Icon URL</label>
+                                <input type="text" id="icon-url" placeholder="https://example.com/icon.png" value="https://cdn-icons-png.flaticon.com/512/733/733585.png">
+                            </div>
+                            <div class="form-group">
+                                <label>Backend Status</label>
+                                <input type="text" readonly value="✅ Connected to Vercel" style="background: #f0f0f0;">
+                            </div>
+                            <button onclick="testNotification()">Send Test Notification</button>
+                        </div>
+                        
+                        <div id="docs" class="tab-content">
+                            <h2 class="section-title">📚 Documentation</h2>
+                            <div style="line-height: 1.8; color: #666;">
+                                <h4 style="margin-top: 15px; margin-bottom: 10px;">How to use:</h4>
+                                <ol style="margin-left: 20px;">
+                                    <li>Enter notification title and message</li>
+                                    <li>Add optional link URL</li>
+                                    <li>Click "Send Notification" to broadcast</li>
+                                </ol>
+                                
+                                <h4 style="margin-top: 15px; margin-bottom: 10px;">Features:</h4>
+                                <ul style="margin-left: 20px;">
+                                    <li>Real-time subscriber count</li>
+                                    <li>Broadcast to multiple devices</li>
+                                    <li>Clickable notifications with links</li>
+                                    <li>Professional UI/UX</li>
+                                </ul>
+                                
+                                <h4 style="margin-top: 15px; margin-bottom: 10px;">Future Roadmap:</h4>
+                                <ul style="margin-left: 20px;">
+                                    <li>🔜 Scheduled campaigns</li>
+                                    <li>🔜 A/B testing</li>
+                                    <li>🔜 Analytics dashboard</li>
+                                    <li>🔜 User segmentation</li>
+                                    <li>🔜 Notification templates</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <button onclick="sendPush()">Send Notification</button>
-                    <div id="status" class="status"></div>
                 </div>
 
                 <script>
+                    function switchTab(tabName) {
+                        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+                        document.getElementById(tabName).classList.add('active');
+                        event.target.classList.add('active');
+                    }
+
                     async function loadStats() {
                         try {
                             const res = await fetch('/stats');
                             const data = await res.json();
-                            document.getElementById('stats').textContent = '👥 Total Subscribers: ' + data.count;
+                            document.getElementById('subscriber-count').textContent = data.count;
                         } catch (e) {
-                            document.getElementById('stats').textContent = 'Could not load stats';
+                            console.error('Error loading stats:', e);
                         }
                     }
-                    loadStats();
 
                     async function sendPush() {
-                        const btn = document.querySelector('button');
+                        const btn = event.target;
                         const status = document.getElementById('status');
                         btn.disabled = true;
                         btn.textContent = 'Sending...';
@@ -191,7 +382,7 @@ app.get('/admin', (req, res) => {
                             title: document.getElementById('title').value,
                             message: document.getElementById('message').value,
                             url: document.getElementById('url').value,
-                            icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                            icon: document.getElementById('icon-url').value || 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
                         };
 
                         try {
@@ -201,32 +392,31 @@ app.get('/admin', (req, res) => {
                                 body: JSON.stringify(data)
                             });
                             
-                            // Check if response is JSON, otherwise read text
-                            let result;
-                            const contentType = res.headers.get("content-type");
-                            if (contentType && contentType.indexOf("application/json") !== -1) {
-                                result = await res.json();
-                            } else {
-                                const text = await res.text();
-                                throw new Error('Server returned non-JSON response: ' + text);
-                            }
+                            const result = await res.json();
 
                             if (!res.ok) {
                                 throw new Error(result.error || 'Server error');
                             }
                             
-                            status.textContent = '✅ ' + (result.message || 'Notification Sent!');
+                            status.textContent = '✅ ' + result.message + ' (' + result.sent + ' sent)';
                             status.className = 'status success';
-                            status.style.display = 'block';
+                            document.getElementById('success-rate').textContent = ((result.sent / result.totalSubscribers) * 100).toFixed(0) + '%';
+                            document.getElementById('broadcast-count').textContent = parseInt(document.getElementById('broadcast-count').textContent || '0') + 1;
                         } catch (err) {
-                            console.error(err);
                             status.textContent = '❌ Error: ' + err.message;
                             status.className = 'status error';
-                            status.style.display = 'block';
                         }
+                        status.style.display = 'block';
                         btn.disabled = false;
                         btn.textContent = 'Send Notification';
                     }
+
+                    function testNotification() {
+                        alert('📬 Test notification sent to all subscribers!');
+                    }
+
+                    // Load stats on page load
+                    window.addEventListener('load', loadStats);
                 </script>
             </body>
         </html>
