@@ -17,7 +17,7 @@ async function subscribeToPushNotifications() {
         // 2. Register Service Worker via App Proxy
         // This path maps to: https://ngrok-url/sw.js
         const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
-            scope: '/'
+            scope: '/apps/push/'
         });
 
         await navigator.serviceWorker.ready;

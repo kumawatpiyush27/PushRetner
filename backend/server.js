@@ -116,6 +116,16 @@ app.get('/subscribe-window', (req, res) => {
     `);
 });
 
+// Stats Endpoint
+app.get('/stats', async (req, res) => {
+    try {
+        const subscriptions = await SubscriptionModel.find();
+        res.json({ count: subscriptions.length });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Admin Page Endpoint (Send Notifications)
 app.get('/admin', (req, res) => {
     res.send(`
@@ -135,11 +145,13 @@ app.get('/admin', (req, res) => {
                     .status { margin-top: 20px; padding: 10px; border-radius: 6px; display: none; }
                     .success { background: #d4edda; color: #155724; }
                     .error { background: #f8d7da; color: #721c24; }
+                    .stats { margin-bottom: 20px; padding: 10px; background: #e9ecef; border-radius: 6px; font-weight: bold; text-align: center; }
                 </style>
             </head>
             <body>
                 <div class="card">
                     <h2>📢 Send Broadcast</h2>
+                    <div id="stats" class="stats">Loading subscribers...</div>
                     <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="title" placeholder="New Sale!" value="Big Sale Alert! 🚀">
@@ -157,6 +169,17 @@ app.get('/admin', (req, res) => {
                 </div>
 
                 <script>
+                    async function loadStats() {
+                        try {
+                            const res = await fetch('/stats');
+                            const data = await res.json();
+                            document.getElementById('stats').textContent = '👥 Total Subscribers: ' + data.count;
+                        } catch (e) {
+                            document.getElementById('stats').textContent = 'Could not load stats';
+                        }
+                    }
+                    loadStats();
+
                     async function sendPush() {
                         const btn = document.querySelector('button');
                         const status = document.getElementById('status');
@@ -177,13 +200,27 @@ app.get('/admin', (req, res) => {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(data)
                             });
-                            const result = await res.json();
                             
-                            status.textContent = '✅ ' + result.message;
+                            // Check if response is JSON, otherwise read text
+                            let result;
+                            const contentType = res.headers.get("content-type");
+                            if (contentType && contentType.indexOf("application/json") !== -1) {
+                                result = await res.json();
+                            } else {
+                                const text = await res.text();
+                                throw new Error('Server returned non-JSON response: ' + text);
+                            }
+
+                            if (!res.ok) {
+                                throw new Error(result.error || 'Server error');
+                            }
+                            
+                            status.textContent = '✅ ' + (result.message || 'Notification Sent!');
                             status.className = 'status success';
                             status.style.display = 'block';
                         } catch (err) {
-                            status.textContent = '❌ Error sending broadcast';
+                            console.error(err);
+                            status.textContent = '❌ Error: ' + err.message;
                             status.className = 'status error';
                             status.style.display = 'block';
                         }
