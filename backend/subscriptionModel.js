@@ -34,9 +34,20 @@ const SubscriptionModel = {
             VALUES ($1, $2, $3)
             RETURNING *;
         `;
-        const values = [data.endpoint, data.expirationTime, data.keys];
+        // Extract the correct fields from the subscription object
+        const endpoint = data.endpoint;
+        const expirationTime = data.expirationTime || null;
+        // Ensure keys is stored as JSON
+        const keys = typeof data.keys === 'string' ? data.keys : JSON.stringify(data.keys);
+        
+        const values = [endpoint, expirationTime, keys];
         const res = await pool.query(query, values);
-        return { ...res.rows[0], _id: res.rows[0].id };
+        return {
+            endpoint: res.rows[0].endpoint,
+            expirationTime: res.rows[0].expiration_time,
+            keys: typeof res.rows[0].keys === 'string' ? JSON.parse(res.rows[0].keys) : res.rows[0].keys,
+            _id: res.rows[0].id
+        };
     },
 
     find: async () => {

@@ -294,8 +294,14 @@ app.post('/subscribe', async (req, res) => {
 
         console.log('📤 Sending welcome notification...');
         try {
+            // Format subscription properly for webPush
+            const subscription = {
+                endpoint: newSubscription.endpoint,
+                keys: newSubscription.keys
+            };
+            
             await webPush.sendNotification(
-                newSubscription,
+                subscription,
                 JSON.stringify({
                     title: 'Welcome to Zyra Jewel!',
                     description: 'You will now receive updates about our latest collections.',
