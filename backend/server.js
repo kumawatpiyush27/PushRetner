@@ -322,6 +322,26 @@ app.post('/subscribe', async (req, res) => {
     }
 });
 
+app.get('/debug-subscriptions', async (req, res) => {
+    try {
+        const subscriptions = await SubscriptionModel.find();
+        res.json({
+            totalCount: subscriptions.length,
+            subscriptions: subscriptions.map(sub => ({
+                id: sub._id,
+                endpoint: sub.endpoint ? sub.endpoint.substring(0, 100) + '...' : null,
+                hasKeys: !!sub.keys,
+                keysType: typeof sub.keys,
+                keysKeys: sub.keys ? Object.keys(sub.keys) : [],
+                hasP256dh: sub.keys?.p256dh ? 'yes' : 'no',
+                hasAuth: sub.keys?.auth ? 'yes' : 'no'
+            }))
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Broadcast notification to all subscribers
 app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url } = req.body;
