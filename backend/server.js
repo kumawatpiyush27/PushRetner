@@ -450,27 +450,162 @@ app.get('/admin', (req, res) => {
                             <p>Create and manage campaigns</p>
                         </div>
                         
-                        <div class="section">
-                            <div class="section-title">Create New Campaign</div>
-                            <div class="form-group">
-                                <label>Campaign Name</label>
-                                <input type="text" id="campaign-name" placeholder="Black Friday Sale">
+                        <!-- Campaign List View -->
+                        <div id="campaigns-list-view" class="section">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <div class="section-title" style="margin: 0;">📋 Recent Campaigns</div>
+                                <button onclick="switchCampaignView('create')" style="padding: 8px 16px; font-size: 13px;">+ New Campaign</button>
                             </div>
-                            <div class="form-group">
-                                <label>Title</label>
-                                <input type="text" id="campaign-title" placeholder="Limited Time Offer!">
+                            <div id="campaigns-history" style="color: #999; text-align: center; padding: 40px;">
+                                <p>No campaigns yet. Create your first campaign!</p>
                             </div>
-                            <div class="form-group">
-                                <label>Message</label>
-                                <textarea id="campaign-message" rows="3" placeholder="Enter message..."></textarea>
-                            </div>
-                            <div class="form-row">
+                        </div>
+
+                        <!-- Campaign Creation Flow -->
+                        <div id="campaigns-create-view" style="display: none;">
+                            <!-- Step 1: Campaign Details -->
+                            <div id="step1" class="section">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                                    <div>
+                                        <div class="section-title" style="margin: 0;">Step 1: Campaign Details</div>
+                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Add basic information</p>
+                                    </div>
+                                    <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">1/4</div>
+                                </div>
+
                                 <div class="form-group">
-                                    <label>Link</label>
-                                    <input type="text" id="campaign-link" placeholder="https://...">
+                                    <label>Campaign Name *</label>
+                                    <input type="text" id="camp-name" placeholder="e.g., Black Friday Sale">
+                                </div>
+                                <div class="form-group">
+                                    <label>Campaign Type</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px;">
+                                            <input type="radio" name="type" value="regular" checked>
+                                            <span style="font-weight: normal;">Regular Campaign</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; opacity: 0.5;">
+                                            <input type="radio" name="type" value="flash" disabled>
+                                            <span style="font-weight: normal;">Flash Sale</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px;">
+                                    <button onclick="switchCampaignView('list')" style="background: #f0f0f0; color: #333;">Cancel</button>
+                                    <button onclick="goToStep(2)">Next: Message →</button>
                                 </div>
                             </div>
-                            <button onclick="createCampaign()">💾 Save Campaign</button>
+
+                            <!-- Step 2: Message Content -->
+                            <div id="step2" class="section" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                                    <div>
+                                        <div class="section-title" style="margin: 0;">Step 2: Message Content</div>
+                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Compose your notification</p>
+                                    </div>
+                                    <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">2/4</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Notification Title *</label>
+                                    <input type="text" id="camp-title" placeholder="e.g., Mega Sale Alert!" maxlength="50" oninput="updatePreview()">
+                                    <small style="color: #999; margin-top: 5px; display: block;"><span id="title-count">0</span>/50</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Message *</label>
+                                    <textarea id="camp-message" rows="4" placeholder="e.g., Get 50% off on all items!" maxlength="200" oninput="updatePreview()"></textarea>
+                                    <small style="color: #999; margin-top: 5px; display: block;"><span id="message-count">0</span>/200</small>
+                                </div>
+
+                                <!-- Live Preview -->
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+                                    <p style="font-size: 12px; color: #999; margin-bottom: 8px;">📱 Preview</p>
+                                    <div style="background: white; padding: 12px; border-radius: 6px;">
+                                        <strong id="preview-title" style="display: block; font-size: 14px; margin-bottom: 4px;">Notification Title</strong>
+                                        <p id="preview-message" style="font-size: 12px; color: #666; margin: 0;">Your message here</p>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 25px;">
+                                    <button onclick="goToStep(1)" style="background: #f0f0f0; color: #333;">← Back</button>
+                                    <button onclick="goToStep(3)">Next: Link & Options →</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Link & Settings -->
+                            <div id="step3" class="section" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                                    <div>
+                                        <div class="section-title" style="margin: 0;">Step 3: Link & Settings</div>
+                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Add destination and options</p>
+                                    </div>
+                                    <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">3/4</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Link URL (Optional)</label>
+                                    <input type="text" id="camp-link" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Target Audience</label>
+                                    <select style="width: 100%; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; font-family: inherit;">
+                                        <option>All Subscribers</option>
+                                        <option disabled>New Subscribers (Coming Soon)</option>
+                                        <option disabled>Engaged Users (Coming Soon)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" checked> Rich Notifications (with image)
+                                    </label>
+                                    <p style="color: #999; font-size: 12px; margin-top: 5px;">Display images in notifications for better engagement</p>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 25px;">
+                                    <button onclick="goToStep(2)" style="background: #f0f0f0; color: #333;">← Back</button>
+                                    <button onclick="goToStep(4)">Next: Send Options →</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Send Options -->
+                            <div id="step4" class="section" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                                    <div>
+                                        <div class="section-title" style="margin: 0;">Step 4: Send Options</div>
+                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Choose when to send</p>
+                                    </div>
+                                    <div style="background: #667eea; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">4/4</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Sending Option</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #667eea; border-radius: 8px; background: #f0f3ff;">
+                                            <input type="radio" name="send" value="now" checked>
+                                            <span style="font-weight: normal;">Send Now</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; opacity: 0.5;">
+                                            <input type="radio" name="send" value="schedule" disabled>
+                                            <span style="font-weight: normal;">Schedule (Premium)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="background: #ecfdf5; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+                                    <p style="margin: 0; color: #047857; font-size: 14px;">
+                                        <strong>✅ Ready to send</strong><br>
+                                        <span style="font-size: 12px;">This campaign will be sent to <strong id="audience-count">0</strong> subscribers</span>
+                                    </p>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 25px;">
+                                    <button onclick="goToStep(3)" style="background: #f0f0f0; color: #333;">← Back</button>
+                                    <button onclick="submitCampaign()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 700;">🚀 Send Campaign</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -585,7 +720,101 @@ app.get('/admin', (req, res) => {
                         alert('Campaign saved! Ready to send.');
                     }
 
-                    window.addEventListener('load', loadStats);
+                    // Campaign Flow Functions
+                    function switchCampaignView(view) {
+                        if (view === 'list') {
+                            document.getElementById('campaigns-list-view').style.display = 'block';
+                            document.getElementById('campaigns-create-view').style.display = 'none';
+                        } else {
+                            document.getElementById('campaigns-list-view').style.display = 'none';
+                            document.getElementById('campaigns-create-view').style.display = 'block';
+                            goToStep(1);
+                        }
+                    }
+
+                    function goToStep(stepNum) {
+                        // Hide all steps
+                        for (let i = 1; i <= 4; i++) {
+                            document.getElementById('step' + i).style.display = 'none';
+                        }
+                        // Show current step
+                        document.getElementById('step' + stepNum).style.display = 'block';
+                        // Scroll to top
+                        document.querySelector('.main-content').scrollTop = 0;
+                    }
+
+                    function updatePreview() {
+                        const title = document.getElementById('camp-title').value || 'Notification Title';
+                        const message = document.getElementById('camp-message').value || 'Your message here';
+                        
+                        document.getElementById('preview-title').textContent = title;
+                        document.getElementById('preview-message').textContent = message;
+                        
+                        // Update character counts
+                        document.getElementById('title-count').textContent = document.getElementById('camp-title').value.length;
+                        document.getElementById('message-count').textContent = document.getElementById('camp-message').value.length;
+                    }
+
+                    async function submitCampaign() {
+                        const name = document.getElementById('camp-name').value;
+                        const title = document.getElementById('camp-title').value;
+                        const message = document.getElementById('camp-message').value;
+                        const link = document.getElementById('camp-link').value;
+
+                        if (!name || !title || !message) {
+                            alert('Please fill in all required fields');
+                            return;
+                        }
+
+                        const btn = event.target;
+                        btn.disabled = true;
+                        btn.textContent = '⏳ Sending...';
+
+                        try {
+                            const res = await fetch('/broadcast', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    title: title,
+                                    message: message,
+                                    url: link || 'https://zyrajewel.co.in',
+                                    icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                                })
+                            });
+
+                            const result = await res.json();
+
+                            if (!res.ok) throw new Error(result.error);
+
+                            alert('✅ Campaign sent successfully to ' + result.sent + ' subscribers!');
+                            
+                            // Update stats
+                            document.getElementById('campaigns-sent').textContent = parseInt(document.getElementById('campaigns-sent').textContent || '0') + 1;
+                            document.getElementById('success-rate').textContent = ((result.sent / result.totalSubscribers) * 100).toFixed(0) + '%';
+
+                            // Reset form and go back to list
+                            document.getElementById('camp-name').value = '';
+                            document.getElementById('camp-title').value = '';
+                            document.getElementById('camp-message').value = '';
+                            document.getElementById('camp-link').value = 'https://zyrajewel.co.in';
+                            switchCampaignView('list');
+                        } catch (err) {
+                            alert('❌ Error: ' + err.message);
+                        }
+
+                        btn.disabled = false;
+                        btn.textContent = '🚀 Send Campaign';
+                    }
+
+                    window.addEventListener('load', () => {
+                        loadStats();
+                        // Load audience count
+                        fetch('/stats')
+                            .then(r => r.json())
+                            .then(d => {
+                                document.getElementById('audience-count').textContent = d.count;
+                            });
+                    });
                 </script>
             </body>
         </html>
