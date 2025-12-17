@@ -18,8 +18,8 @@ async function subscribeToPushNotifications() {
         const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
             scope: '/apps/push/'
         });
-        await navigator.serviceWorker.ready;
-        console.log('SW Registered:', registration);
+        // await navigator.serviceWorker.ready; // Skipped due to scope difference
+        console.log('SW Registered (Skipped Ready Wait):', registration);
 
         console.log('Step 3: Creating Subscription with VAPID...');
         // Replace this with your actual VAPID Public Key from Vercel env
