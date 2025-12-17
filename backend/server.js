@@ -17,25 +17,73 @@ app.get('/sw.js', (req, res) => {
     console.log('📢 Request received for /sw.js');
     res.set('Service-Worker-Allowed', '/');
     res.set('Content-Type', 'application/javascript');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate'); // Force cache bust
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
     // Return raw JS string to avoid any file system errors (500)
     res.status(200).send(`
-        self.addEventListener('push', event => {
-            const data = event.data ? event.data.json() : {};
-            const options = {
-                body: data.description || 'You have a new message',
-                icon: data.image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-                data: { url: data.url || '/' }
-            };
-            event.waitUntil(
-                self.registration.showNotification(data.title || 'Notification', options)
-            );
+        self.addEventListener('push', async function (event) {
+            try {
+                const message = await event.data.json();
+                let { title, body, icon, badge, actions, data, requireInteraction, tag } = message;
+
+                console.log('🔔 Push notification received:', {
+                    title,
+                    body,
+                    hasIcon: !!icon,
+                    actionsCount: actions ? actions.length : 0
+                });
+
+                const notificationOptions = {
+                    body: body || 'You have a new notification',
+                    icon: icon,
+                    badge: badge,
+                    vibrate: [200, 100, 200],
+                    tag: tag || 'notification-' + Date.now(),
+                    requireInteraction: requireInteraction || false,
+                    data: data || {}
+                };
+
+                // Add actions if they exist
+                if (actions && actions.length > 0) {
+                    notificationOptions.actions = actions;
+                    console.log('✅ Added actions:', actions);
+                }
+
+                console.log('📢 Showing notification with options:', notificationOptions);
+
+                await event.waitUntil(
+                    self.registration.showNotification(title, notificationOptions)
+                );
+            } catch (error) {
+                console.error('❌ Error showing notification:', error);
+            }
         });
 
-        self.addEventListener('notificationclick', event => {
+        self.addEventListener('notificationclick', function (event) {
+            console.log('🖱️ Notification clicked:', {
+                action: event.action,
+                notification: event.notification.tag
+            });
             event.notification.close();
+
+            let urlToOpen = '/';
+
+            if (event.action) {
+                // If action is a URL (from button), use it
+                if (event.action.startsWith('http')) {
+                    urlToOpen = event.action;
+                } else {
+                    // Otherwise use data url
+                    urlToOpen = event.notification.data.url || '/';
+                }
+            } else if (event.notification.data && event.notification.data.url) {
+                urlToOpen = event.notification.data.url;
+            }
+
             event.waitUntil(
-                clients.openWindow(event.notification.data.url)
+                clients.openWindow(urlToOpen)
             );
         });
     `);
