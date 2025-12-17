@@ -17,7 +17,8 @@ export default function AdminDashboard() {
         name: '',
         title: '',
         message: '',
-        link: ''
+        link: '',
+        imageUrl: ''
     });
 
     const icons = ['🔔', '🎉', '💰', '⭐', '🎁', '🚀', '❤️', '✅'];
@@ -82,12 +83,22 @@ export default function AdminDashboard() {
         if (file && file.size <= 2 * 1024 * 1024) {
             const reader = new FileReader();
             reader.onload = (e) => {
+                // Store as base64 for preview only
                 setImage(e.target.result);
             };
             reader.readAsDataURL(file);
         } else {
             alert('Image size must be less than 2MB');
         }
+    }
+
+    function getImageUrlForNotification() {
+        // Use imageUrl field if provided (for external URLs)
+        if (formData.imageUrl) {
+            return formData.imageUrl;
+        }
+        // Base64 images are too large for notifications, skip them
+        return '';
     }
 
     function addButton() {
@@ -112,8 +123,8 @@ export default function AdminDashboard() {
             title: selectedIcon + ' ' + formData.title,
             message: formData.message,
             url: formData.link,
-            image: image,
-            buttons: buttons.map(btn => ({ text: btn.text, url: btn.url })),
+            image: getImageUrlForNotification() || '',
+            buttons: buttons.map(btn => ({ text: btn.text, url: btn.url })).filter(btn => btn.text),
             icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
         };
 
@@ -345,6 +356,7 @@ export default function AdminDashboard() {
                                 {/* Image Upload */}
                                 <div className="form-group">
                                     <label>Campaign Image (Optional)</label>
+                                    <p style={{ fontSize: '12px', color: '#999', marginBottom: '10px' }}>Upload preview or paste image URL:</p>
                                     <div 
                                         style={{
                                             border: '2px dashed #e8e8e8',
@@ -370,6 +382,16 @@ export default function AdminDashboard() {
                                         accept="image/*" 
                                         style={{ display: 'none' }}
                                         onChange={handleImageUpload}
+                                    />
+                                    
+                                    <p style={{ fontSize: '12px', color: '#999', margin: '12px 0 8px 0', textAlign: 'center' }}>OR</p>
+                                    
+                                    <input 
+                                        type="text" 
+                                        placeholder="Paste image URL (for notifications) e.g., https://example.com/image.jpg"
+                                        value={formData.imageUrl}
+                                        onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                                        style={{ width: '100%' }}
                                     />
                                 </div>
 
