@@ -537,8 +537,8 @@ app.get('/admin', (req, res) => {
                             <div id="step3" class="section" style="display: none;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                                     <div>
-                                        <div class="section-title" style="margin: 0;">Step 3: Link & Settings</div>
-                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Add destination and options</p>
+                                        <div class="section-title" style="margin: 0;">Step 3: Link & Media</div>
+                                        <p style="color: #999; font-size: 13px; margin-top: 5px;">Add destination, images, and icons</p>
                                     </div>
                                     <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">3/4</div>
                                 </div>
@@ -548,6 +548,71 @@ app.get('/admin', (req, res) => {
                                     <input type="text" id="camp-link" placeholder="https://zyrajewel.co.in" value="https://zyrajewel.co.in">
                                 </div>
 
+                                <!-- Image Upload -->
+                                <div class="form-group">
+                                    <label>Campaign Image (Optional)</label>
+                                    <div style="border: 2px dashed #e8e8e8; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer;" onclick="document.getElementById('image-input').click()">
+                                        <div id="image-preview" style="display: none; margin-bottom: 15px;">
+                                            <img id="preview-img" src="" style="max-width: 100%; max-height: 200px; border-radius: 6px;">
+                                        </div>
+                                        <div id="image-placeholder">
+                                            <p style="font-size: 20px; margin: 0;">📸</p>
+                                            <p style="margin: 8px 0 0 0; color: #999; font-size: 13px;">Click to upload image or drag & drop</p>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                                    <small style="color: #999; margin-top: 5px; display: block;">Supported: PNG, JPG, GIF (Max 2MB)</small>
+                                </div>
+
+                                <!-- Icon Selection -->
+                                <div class="form-group">
+                                    <label>Notification Icon</label>
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="🔔" checked onchange="updatePreview()">
+                                            <span style="font-size: 20px;">🔔</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="🎉" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">🎉</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="💰" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">💰</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="⭐" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">⭐</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="🎁" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">🎁</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="🚀" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">🚀</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="❤️" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">❤️</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; text-align: center;">
+                                            <input type="radio" name="icon" value="✅" onchange="updatePreview()">
+                                            <span style="font-size: 20px;">✅</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="form-group">
+                                    <label>Action Buttons (Optional)</label>
+                                    <div id="buttons-list" style="margin-bottom: 12px;">
+                                        <!-- Buttons will be added here -->
+                                    </div>
+                                    <button type="button" onclick="addButton()" style="background: #667eea; font-size: 13px; padding: 8px 16px; width: auto;">+ Add Button</button>
+                                </div>
+
+                                <!-- Target Audience -->
                                 <div class="form-group">
                                     <label>Target Audience</label>
                                     <select style="width: 100%; padding: 12px; border: 2px solid #e8e8e8; border-radius: 8px; font-family: inherit;">
@@ -555,13 +620,6 @@ app.get('/admin', (req, res) => {
                                         <option disabled>New Subscribers (Coming Soon)</option>
                                         <option disabled>Engaged Users (Coming Soon)</option>
                                     </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" checked> Rich Notifications (with image)
-                                    </label>
-                                    <p style="color: #999; font-size: 12px; margin-top: 5px;">Display images in notifications for better engagement</p>
                                 </div>
 
                                 <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 25px;">
@@ -746,13 +804,55 @@ app.get('/admin', (req, res) => {
                     function updatePreview() {
                         const title = document.getElementById('camp-title').value || 'Notification Title';
                         const message = document.getElementById('camp-message').value || 'Your message here';
+                        const icon = document.querySelector('input[name="icon"]:checked').value || '🔔';
                         
-                        document.getElementById('preview-title').textContent = title;
+                        document.getElementById('preview-title').textContent = icon + ' ' + title;
                         document.getElementById('preview-message').textContent = message;
                         
                         // Update character counts
                         document.getElementById('title-count').textContent = document.getElementById('camp-title').value.length;
                         document.getElementById('message-count').textContent = document.getElementById('camp-message').value.length;
+                    }
+
+                    function handleImageUpload(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            if (file.size > 2 * 1024 * 1024) {
+                                alert('Image size must be less than 2MB');
+                                return;
+                            }
+                            
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                document.getElementById('preview-img').src = e.target.result;
+                                document.getElementById('image-preview').style.display = 'block';
+                                document.getElementById('image-placeholder').style.display = 'none';
+                                document.getElementById('image-input').dataset.base64 = e.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+
+                    let buttonCount = 0;
+                    function addButton() {
+                        buttonCount++;
+                        const buttonsList = document.getElementById('buttons-list');
+                        const buttonDiv = document.createElement('div');
+                        buttonDiv.id = 'button-' + buttonCount;
+                        buttonDiv.style.display = 'flex';
+                        buttonDiv.style.gap = '8px';
+                        buttonDiv.style.marginBottom = '10px';
+                        buttonDiv.innerHTML = `
+                            <input type="text" placeholder="Button text" maxlength="20" style="flex: 1; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;">
+                            <input type="text" placeholder="Button URL" style="flex: 1.5; padding: 8px; border: 2px solid #e8e8e8; border-radius: 6px; font-size: 13px;">
+                            <button type="button" onclick="removeButton(${buttonCount})" style="background: #ff6b6b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;">✕</button>
+                        `;
+                        buttonsList.appendChild(buttonDiv);
+                    }
+
+                    function removeButton(id) {
+                        const element = document.getElementById('button-' + id);
+                        if (element) element.remove();
                     }
 
                     async function submitCampaign() {
