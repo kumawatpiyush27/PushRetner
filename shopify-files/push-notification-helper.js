@@ -23,7 +23,7 @@ async function subscribeToPushNotifications() {
 
         console.log('Step 3: Creating Subscription with VAPID...');
         // Replace this with your actual VAPID Public Key from Vercel env
-        const publicVapidKey = 'BPj1sl5Dtd7yap6_bCwqGyBVga2KtU-KwMJ1UjnIJ77_1dx1MYKVl8ZcgG-68e6tdcUudmX9H135uh-sjl3trhE';
+        const publicVapidKey = 'BDPX3qotmPejxIyBb6RXDnxTnLst5wifSbrGqQdC11GzvLNDUNriPN4XPIljpXec1Uz7niWSqpdln8hvqad3z7s';
 
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
