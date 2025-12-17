@@ -342,6 +342,17 @@ app.get('/debug-subscriptions', async (req, res) => {
     }
 });
 
+app.get('/debug-vapid', (req, res) => {
+    res.json({
+        hasPublicKey: !!process.env.PUBLIC_KEY,
+        publicKeyLength: process.env.PUBLIC_KEY ? process.env.PUBLIC_KEY.length : 0,
+        hasPrivateKey: !!process.env.PRIVATE_KEY,
+        privateKeyLength: process.env.PRIVATE_KEY ? process.env.PRIVATE_KEY.length : 0,
+        publicKeyStart: process.env.PUBLIC_KEY ? process.env.PUBLIC_KEY.substring(0, 20) + '...' : 'MISSING',
+        privateKeyStart: process.env.PRIVATE_KEY ? process.env.PRIVATE_KEY.substring(0, 20) + '...' : 'MISSING'
+    });
+});
+
 // Broadcast notification to all subscribers
 app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url } = req.body;
@@ -444,10 +455,16 @@ app.post('/broadcast', async (req, res) => {
             message: `Broadcast sent to ${successCount} subscribers`
         });
     } catch (error) {
-        console.error('❌ Broadcast error:', error);
+        console.error('❌ Broadcast error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         res.status(500).json({
             success: false,
-            error: error.message || 'Failed to send broadcast'
+            error: error.message || 'Failed to send broadcast',
+            errorName: error.name,
+            errorDetails: error.toString()
         });
     }
 });
