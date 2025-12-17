@@ -1123,6 +1123,51 @@ app.get('/test-single-notification', async (req, res) => {
     }
 });
 
+// Test endpoint to verify payload format
+app.post('/test-payload', async (req, res) => {
+    const { title, message, url, image, buttons, icon } = req.body;
+    
+    console.log('🧪 TEST PAYLOAD received:', {
+        title,
+        message,
+        url,
+        image: image ? image.substring(0, 50) + '...' : 'empty',
+        buttonsCount: buttons ? buttons.length : 0,
+        buttons,
+        icon
+    });
+
+    // Build the payload exactly as broadcast does
+    const notificationPayload = {
+        title: title || 'Notification',
+        body: message || 'You have a new notification',
+        icon: image || icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+        badge: image || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+        tag: 'notification-' + Date.now(),
+        requireInteraction: buttons && buttons.length > 0,
+        data: {
+            url: url || '/',
+            buttons: buttons || []
+        }
+    };
+
+    // Add actions if buttons exist
+    if (buttons && buttons.length > 0) {
+        notificationPayload.actions = buttons.slice(0, 2).map((btn, idx) => ({
+            action: btn.url || '/',
+            title: btn.text || 'Action ' + (idx + 1)
+        }));
+    }
+
+    console.log('🧪 BUILT PAYLOAD:', JSON.stringify(notificationPayload, null, 2));
+
+    res.json({
+        received: req.body,
+        built: notificationPayload,
+        message: 'Check console for payload details'
+    });
+});
+
 // Broadcast notification to all subscribers
 app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url, image, buttons } = req.body;
