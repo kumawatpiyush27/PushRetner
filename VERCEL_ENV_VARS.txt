@@ -1,0 +1,17 @@
+# Copy-Paste these values in Vercel Environment Variables
+
+# Variable 1
+Name: DATABASE_URL
+Value: postgresql://neondb_owner:npg_Q2FL0BrtGfqY@ep-square-pine-a4iy909q-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# Variable 2
+Name: PUBLIC_KEY
+Value: BN2u6-t6iC6o0CKza2ifWfNy_OSovucgNlZwgeWoMbAYME6b5qdgdDD6WIX6c_SOAF-R15ZepMt0N4eTdFZlU04
+
+# Variable 3
+Name: PRIVATE_KEY
+Value: l_uWy8qBj22_JqzEAHlj6TvxTYM7xCqR2V7SFa_fmb4
+
+# Variable 4
+Name: NODE_ENV
+Value: production

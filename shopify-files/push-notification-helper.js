@@ -1,9 +1,10 @@
 // Push Notification Helper for Shopify
 // Place this file in your Shopify theme: Assets > push-notification-helper.js
 
-// IMPORTANT: Ensure your Shopify App Proxy (e.g., /apps/push) points to your Vercel Backend URL.
-// You do not need to hardcode the URL here if using the proxy.
-const BACKEND_URL = ''; // Kept for reference, logic uses /apps/push proxy below
+// IMPORTANT: Update this with your deployed Vercel backend URL
+// Option 1: Use direct Vercel URL (easier, no proxy needed)
+// Option 2: Use Shopify App Proxy /apps/push (requires Shopify app setup)
+const BACKEND_URL = 'https://push-retner.vercel.app'; // Your Vercel backend URL
 
 // Subscribe to push notifications (Direct App Proxy Method)
 async function subscribeToPushNotifications() {
@@ -15,14 +16,15 @@ async function subscribeToPushNotifications() {
         }
 
         console.log('Step 2: Registering SW...');
-        const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
-            scope: '/apps/push/'
+        // Register service worker from Vercel backend
+        const registration = await navigator.serviceWorker.register(`${BACKEND_URL}/sw.js`, {
+            scope: '/'
         });
-        
+
         // Wait for the service worker to be active before proceeding
         console.log('Step 2.5: Waiting for Service Worker to be active...');
         let serviceWorker = registration.installing || registration.waiting || registration.active;
-        
+
         if (serviceWorker) {
             await new Promise((resolve) => {
                 if (serviceWorker.state === 'activated') {
@@ -37,12 +39,12 @@ async function subscribeToPushNotifications() {
                 }
             });
         }
-        
+
         console.log('SW Active:', registration);
 
         console.log('Step 3: Creating Subscription with VAPID...');
-        // Replace this with your actual VAPID Public Key from Vercel env
-        const publicVapidKey = 'BJFvSsHhCT8vKMQ9GtUiMmXZlnzzepGZvGqLwcbfrFxpSoBhuL6x52r_ivBW7PhgROj6X8w4wm7986xgURm1r1s';
+        // VAPID Public Key - Must match the PUBLIC_KEY in Vercel environment variables
+        const publicVapidKey = 'BN2u6-t6iC6o0CKza2ifWfNy_OSovucgNlZwgeWoMbAYME6b5qdgdDD6WIX6c_SOAF-R15ZepMt0N4eTdFZlU04';
 
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
@@ -50,8 +52,8 @@ async function subscribeToPushNotifications() {
         });
         console.log('Subscription Object Created:', JSON.stringify(subscription));
 
-        console.log('Step 4: Sending to Backend via Proxy...');
-        const response = await fetch('/apps/push/subscribe', {
+        console.log('Step 4: Sending to Backend...');
+        const response = await fetch(`${BACKEND_URL}/subscribe`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
