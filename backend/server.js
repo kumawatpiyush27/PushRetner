@@ -89,12 +89,26 @@ app.get('/sw.js', (req, res) => {
     `);
 });
 
-// Serve static files
-app.use(express.static('public'));
-app.use(express.static('../frontend/build'));
+// Serve static files (only in local development)
+if (process.env.NODE_ENV !== 'production') {
+    app.use(express.static('public'));
+    app.use(express.static('../frontend/build'));
+}
 
+// Root endpoint - API info
 app.get('/', (req, res) => {
-    res.sendFile(require('path').join(__dirname, '../frontend/build/index.html'));
+    res.json({
+        name: 'Zyra Push Notification API',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+            admin: '/admin',
+            subscribe: '/subscribe',
+            broadcast: '/broadcast',
+            stats: '/stats',
+            serviceWorker: '/sw.js'
+        }
+    });
 });
 
 // Subscribe Page Endpoint (Popup Window)
@@ -1034,7 +1048,7 @@ app.post('/subscribe', async (req, res) => {
                 endpoint: newSubscription.endpoint,
                 keys: newSubscription.keys
             };
-            
+
             await webPush.sendNotification(
                 subscription,
                 JSON.stringify({
@@ -1083,12 +1097,12 @@ app.get('/cleanup-subscriptions', async (req, res) => {
         if (token !== 'delete_all_subscriptions_12345') {
             return res.status(403).json({ error: 'Invalid token' });
         }
-        
+
         console.log('🗑️ Deleting all subscriptions...');
         const result = await SubscriptionModel.deleteAll();
         console.log('✅ Deleted:', result?.rowCount, 'subscriptions');
-        
-        res.json({ 
+
+        res.json({
             success: true,
             message: 'All subscriptions deleted',
             deleted: result?.rowCount || 0
@@ -1113,18 +1127,18 @@ app.get('/debug-vapid', (req, res) => {
 app.get('/test-single-notification', async (req, res) => {
     try {
         const subscriptions = await SubscriptionModel.find();
-        
+
         if (subscriptions.length === 0) {
             return res.json({ error: 'No subscriptions found' });
         }
-        
+
         const sub = subscriptions[0];
         console.log('🧪 Testing notification to first subscription:', {
             id: sub._id,
             endpoint: sub.endpoint ? sub.endpoint.substring(0, 50) + '...' : 'missing',
             keys: sub.keys ? Object.keys(sub.keys) : 'missing'
         });
-        
+
         const options = {
             vapidDetails: {
                 subject: 'mailto:admin@zyrajewel.co.in',
@@ -1133,14 +1147,14 @@ app.get('/test-single-notification', async (req, res) => {
             },
             TTL: 24 * 60 * 60, // 24 hours TTL in seconds
         };
-        
+
         const subscription = {
             endpoint: sub.endpoint,
             keys: sub.keys
         };
-        
+
         console.log('📤 About to send with subscription:', subscription);
-        
+
         try {
             await webPush.sendNotification(
                 subscription,
@@ -1174,7 +1188,7 @@ app.get('/test-single-notification', async (req, res) => {
 // Test endpoint to verify payload format
 app.post('/test-payload', async (req, res) => {
     const { title, message, url, image, buttons, icon } = req.body;
-    
+
     console.log('🧪 TEST PAYLOAD received:', {
         title,
         message,
@@ -1221,15 +1235,15 @@ app.post('/broadcast', async (req, res) => {
     const { title, message, icon, url, image, buttons } = req.body;
 
     try {
-        console.log('📢 Broadcast request received:', { 
-            title, 
+        console.log('📢 Broadcast request received:', {
+            title,
             message,
             hasImage: !!image,
             imageLength: image ? image.length : 0,
             buttonsCount: buttons ? buttons.length : 0,
             buttons: buttons
         });
-        
+
         const subscriptions = await SubscriptionModel.find();
         console.log(`📊 Found ${subscriptions.length} subscribers in database`);
 
@@ -1277,7 +1291,7 @@ app.post('/broadcast', async (req, res) => {
                         keys: Object.keys(sub.keys || {})
                     } : 'no keys object'
                 });
-                
+
                 // Validate subscription structure
                 if (!sub.endpoint || typeof sub.endpoint !== 'string') {
                     throw new Error(`Invalid subscription: endpoint is ${typeof sub.endpoint}`);
@@ -1294,11 +1308,11 @@ app.post('/broadcast', async (req, res) => {
                     endpoint: sub.endpoint,
                     keys: sub.keys
                 };
-                
+
                 console.log(`📤 Sending to ${sub.endpoint.substring(0, 50)}...`, {
                     keysKeys: Object.keys(sub.keys)
                 });
-                
+
                 // Build notification payload
                 const notificationPayload = {
                     title: title || 'Notification',
@@ -1377,7 +1391,7 @@ app.post('/broadcast', async (req, res) => {
 // Test single notification with full data
 app.post('/test-notification', async (req, res) => {
     const { title, message, image, buttons } = req.body;
-    
+
     try {
         const subscriptions = await SubscriptionModel.find();
         if (subscriptions.length === 0) {
