@@ -12,7 +12,7 @@ export default function AdminDashboard() {
     const [image, setImage] = useState(null);
     const [templates, setTemplates] = useState([]);
     const [sentCampaigns, setSentCampaigns] = useState([]);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         title: '',
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
 
             alert('✅ Campaign sent to ' + result.sent + ' subscribers!');
             setCampaigns(campaigns + 1);
-            
+
             // Reset form
             setFormData({ name: '', title: '', message: '', link: 'https://www.retne.ai' });
             setButtons([]);
@@ -265,11 +265,11 @@ export default function AdminDashboard() {
 
                                 <div className="form-group">
                                     <label>Campaign Name *</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="e.g., Black Friday Sale"
                                         value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
 
@@ -292,24 +292,24 @@ export default function AdminDashboard() {
 
                                 <div className="form-group">
                                     <label>Notification Title *</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="e.g., Mega Sale Alert!"
                                         maxLength="50"
                                         value={formData.title}
-                                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     />
                                     <small style={{ color: '#999', marginTop: '5px', display: 'block' }}>{formData.title.length}/50</small>
                                 </div>
 
                                 <div className="form-group">
                                     <label>Message *</label>
-                                    <textarea 
-                                        rows="4" 
+                                    <textarea
+                                        rows="4"
                                         placeholder="e.g., Get 50% off on all items!"
                                         maxLength="200"
                                         value={formData.message}
-                                        onChange={(e) => setFormData({...formData, message: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                                     ></textarea>
                                     <small style={{ color: '#999', marginTop: '5px', display: 'block' }}>{formData.message.length}/200</small>
                                 </div>
@@ -357,11 +357,11 @@ export default function AdminDashboard() {
                                 {/* Link URL */}
                                 <div className="form-group">
                                     <label>Link URL (Optional)</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="https://www.retne.ai"
                                         value={formData.link}
-                                        onChange={(e) => setFormData({...formData, link: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, link: e.target.value })}
                                     />
                                 </div>
 
@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                                 <div className="form-group">
                                     <label>Campaign Image (Optional)</label>
                                     <p style={{ fontSize: '12px', color: '#999', marginBottom: '10px' }}>Upload preview or paste image URL:</p>
-                                    <div 
+                                    <div
                                         style={{
                                             border: '2px dashed #e8e8e8',
                                             padding: '20px',
@@ -388,21 +388,21 @@ export default function AdminDashboard() {
                                             </div>
                                         )}
                                     </div>
-                                    <input 
-                                        type="file" 
-                                        id="image-input" 
-                                        accept="image/*" 
+                                    <input
+                                        type="file"
+                                        id="image-input"
+                                        accept="image/*"
                                         style={{ display: 'none' }}
                                         onChange={handleImageUpload}
                                     />
-                                    
+
                                     <p style={{ fontSize: '12px', color: '#999', margin: '12px 0 8px 0', textAlign: 'center' }}>OR</p>
-                                    
-                                    <input 
-                                        type="text" 
+
+                                    <input
+                                        type="text"
                                         placeholder="Paste image URL (for notifications) e.g., https://example.com/image.jpg"
                                         value={formData.imageUrl}
-                                        onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                                         style={{ width: '100%' }}
                                     />
                                 </div>
@@ -426,9 +426,9 @@ export default function AdminDashboard() {
                                                     backgroundColor: selectedIcon === icon ? '#f0f3ff' : 'white'
                                                 }}
                                             >
-                                                <input 
-                                                    type="radio" 
-                                                    name="icon" 
+                                                <input
+                                                    type="radio"
+                                                    name="icon"
                                                     value={icon}
                                                     checked={selectedIcon === icon}
                                                     onChange={() => setSelectedIcon(icon)}
@@ -444,22 +444,22 @@ export default function AdminDashboard() {
                                     <label>Action Buttons (Optional)</label>
                                     {buttons.map(btn => (
                                         <div key={btn.id} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 placeholder="Button text"
                                                 maxLength="20"
                                                 value={btn.text}
                                                 onChange={(e) => updateButton(btn.id, 'text', e.target.value)}
                                                 style={{ flex: 1 }}
                                             />
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 placeholder="Button URL"
                                                 value={btn.url}
                                                 onChange={(e) => updateButton(btn.id, 'url', e.target.value)}
                                                 style={{ flex: 1.5 }}
                                             />
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => removeButton(btn.id)}
                                                 style={{ background: '#ff6b6b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px' }}
@@ -468,8 +468,8 @@ export default function AdminDashboard() {
                                             </button>
                                         </div>
                                     ))}
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={addButton}
                                         className="btn-primary"
                                         style={{ fontSize: '13px', padding: '8px 16px', width: 'auto' }}
@@ -566,8 +566,8 @@ export default function AdminDashboard() {
                                     <p style={{ margin: 0, color: '#047857', fontSize: '14px' }}>
                                         <strong>✅ Ready to send</strong><br />
                                         <span style={{ fontSize: '12px' }}>
-                                            {formData.name && <><strong>Campaign:</strong> {formData.name}<br/></>}
-                                            <strong>Recipients:</strong> {subscribers} subscribers<br/>
+                                            {formData.name && <><strong>Campaign:</strong> {formData.name}<br /></>}
+                                            <strong>Recipients:</strong> {subscribers} subscribers<br />
                                             {formData.link && <><strong>Link:</strong> <span style={{ wordBreak: 'break-all' }}>{formData.link}</span></>}
                                         </span>
                                     </p>
@@ -649,7 +649,7 @@ export default function AdminDashboard() {
                                         {camp.title}
                                     </p>
                                     <div style={{ fontSize: '11px', color: '#999' }}>
-                                        ✅ Sent to {camp.sent} subscribers<br/>
+                                        ✅ Sent to {camp.sent} subscribers<br />
                                         {camp.timestamp}
                                     </div>
                                 </div>
