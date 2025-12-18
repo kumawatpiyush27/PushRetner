@@ -23,6 +23,21 @@ app.get('/sw.js', (req, res) => {
 
     // Return raw JS string to avoid any file system errors (500)
     res.status(200).send(`
+        console.log('🚀 Service Worker script loaded');
+
+        // Install event - activate immediately
+        self.addEventListener('install', function(event) {
+            console.log('📦 Service Worker installing...');
+            event.waitUntil(self.skipWaiting());
+        });
+
+        // Activate event - take control immediately
+        self.addEventListener('activate', function(event) {
+            console.log('✅ Service Worker activating...');
+            event.waitUntil(self.clients.claim());
+            console.log('✅ Service Worker activated and ready!');
+        });
+
         self.addEventListener('push', async function (event) {
             try {
                 const message = await event.data.json();

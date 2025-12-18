@@ -1,12 +1,21 @@
 // Push Notification Helper for Shopify
 // Place this file in your Shopify theme: Assets > push-notification-helper.js
 
-// IMPORTANT: Update this with your deployed Vercel backend URL
-// Option 1: Use direct Vercel URL (easier, no proxy needed)
-// Option 2: Use Shopify App Proxy /apps/push (requires Shopify app setup)
-const BACKEND_URL = 'https://push-retner.vercel.app'; // Your Vercel backend URL
+// ============================================
+// CONFIGURATION - Choose one option:
+// ============================================
 
-// Subscribe to push notifications (Direct App Proxy Method)
+// OPTION 1: Direct Vercel URL (Recommended - No Shopify App needed)
+const USE_APP_PROXY = false;
+const BACKEND_URL = 'https://push-retner.vercel.app';
+
+// OPTION 2: Shopify App Proxy (Requires Shopify App setup)
+// const USE_APP_PROXY = true;
+// const BACKEND_URL = ''; // Leave empty when using proxy
+
+// ============================================
+
+// Subscribe to push notifications
 async function subscribeToPushNotifications() {
     try {
         console.log('Step 1: Requesting Permission...');
@@ -16,8 +25,12 @@ async function subscribeToPushNotifications() {
         }
 
         console.log('Step 2: Registering SW...');
-        // Register service worker from Vercel backend
-        const registration = await navigator.serviceWorker.register(`${BACKEND_URL}/sw.js`, {
+
+        // Service Worker URL - Hosted on Shopify to avoid cross-origin issues
+        // This will be constructed dynamically based on your Shopify store
+        const swUrl = '/push-sw.js';  // Relative path - will be served from Shopify
+
+        const registration = await navigator.serviceWorker.register(swUrl, {
             scope: '/'
         });
 
@@ -53,7 +66,11 @@ async function subscribeToPushNotifications() {
         console.log('Subscription Object Created:', JSON.stringify(subscription));
 
         console.log('Step 4: Sending to Backend...');
-        const response = await fetch(`${BACKEND_URL}/subscribe`, {
+
+        // Subscription endpoint based on configuration
+        const subscribeUrl = USE_APP_PROXY ? '/apps/push/subscribe' : `${BACKEND_URL}/subscribe`;
+
+        const response = await fetch(subscribeUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
