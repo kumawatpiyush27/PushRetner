@@ -3,7 +3,7 @@
     "build": "cd frontend && npm install && npm run build"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "dependencies": {
     "cors": "^2.8.5",
