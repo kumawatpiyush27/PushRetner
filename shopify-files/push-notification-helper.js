@@ -18,26 +18,38 @@ async function subscribeToPushNotifications() {
         const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
             scope: '/apps/push/'
         });
-        
+
         // Wait for the service worker to be active before proceeding
-        console.log('Step 2.5: Waiting for Service Worker to be active...');
-        let serviceWorker = registration.installing || registration.waiting || registration.active;
-        
-        if (serviceWorker) {
-            await new Promise((resolve) => {
-                if (serviceWorker.state === 'activated') {
+        // WAITING LOGIC FIX
+        console.log('Step 2.5: Checking SW State...');
+
+        // We need to wait until there is an active worker to subscribe
+        if (!registration.active) {
+            console.log('⏳ Waiting for SW to become active...');
+            await new Promise(resolve => {
+                const worker = registration.installing || registration.waiting;
+                if (!worker) {
+                    // Should not happen if registered successfully, but safe fallback
                     resolve();
-                } else {
-                    serviceWorker.addEventListener('statechange', function listener() {
-                        if (serviceWorker.state === 'activated') {
-                            serviceWorker.removeEventListener('statechange', listener);
-                            resolve();
-                        }
-                    });
+                    return;
                 }
+                const check = () => {
+                    if (worker.state === 'activated') {
+                        worker.removeEventListener('statechange', check);
+                        resolve();
+                    }
+                };
+                worker.addEventListener('statechange', check);
+                // Also resolve if registration.active appears
+                const interval = setInterval(() => {
+                    if (registration.active) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 200);
             });
         }
-        
+
         console.log('SW Active:', registration);
 
         console.log('Step 3: Creating Subscription with VAPID...');

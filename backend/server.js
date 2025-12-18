@@ -1,13 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
-const SubscriptionModel = require('./subscriptionModel');
+const path = require('path');
+const SubscriptionModel = require(path.join(__dirname, 'subscriptionModel'));
 const cors = require('cors');
 
 const app = express();
 const port = 9000;
-
-const path = require('path');
 
 const fs = require('fs');
 
