@@ -1616,16 +1616,16 @@ app.post('/test-notification', async (req, res) => {
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 
-// Store credentials (in production, move to database)
+// Store credentials (SIMPLIFIED FOR TESTING - plain-text passwords)
 const storeCredentials = {
     'zyrajewel': {
-        password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', // "ZyraSecure123"
+        password: 'ZyraSecure123', // Plain-text for testing
         name: 'Zyra Jewel',
         domain: 'zyrajewel.myshopify.com',
         email: 'admin@zyrajewel.com'
     },
     'dupattabazaar1': {
-        password: '$2b$10$EixZgcX/h0W3PJEYizn.sOqGb7/68.Ig44eFE1oXp5O/RXxgNWC4e', // "DupattaSecure456"
+        password: 'DupattaSecure456', // Plain-text for testing
         name: 'Dupatta Bazaar',
         domain: 'dupattabazaar1.myshopify.com',
         email: 'admin@dupattabazaar.com'
@@ -1655,25 +1655,11 @@ app.post('/store-login', async (req, res) => {
 
         console.log('🔍 Checking password for:', storeId);
         console.log('📝 Password provided:', password);
-        console.log('🔐 Stored hash:', store.password);
+        console.log('🔐 Stored password:', store.password);
 
-        // Try bcrypt compare
-        let passwordMatch = false;
-        try {
-            passwordMatch = await bcrypt.compare(password, store.password);
-            console.log('✅ Bcrypt compare result:', passwordMatch);
-        } catch (bcryptError) {
-            console.error('❌ Bcrypt error:', bcryptError.message);
-
-            // Fallback: Check if it's a plain-text match (for testing only)
-            if (password === 'DupattaSecure456' && storeId === 'dupattabazaar1') {
-                passwordMatch = true;
-                console.log('⚠️ Using plain-text fallback for dupattabazaar1');
-            } else if (password === 'ZyraSecure123' && storeId === 'zyrajewel') {
-                passwordMatch = true;
-                console.log('⚠️ Using plain-text fallback for zyrajewel');
-            }
-        }
+        // Simple string comparison (plain-text passwords for testing)
+        const passwordMatch = (password === store.password);
+        console.log('✅ Password match result:', passwordMatch);
 
         if (!passwordMatch) {
             console.log('❌ Password mismatch');
