@@ -1403,6 +1403,168 @@ app.post('/broadcast', async (req, res) => {
     }
 });
 
+// 🏪 MULTI-STORE SUPPORT: Broadcast to specific store
+app.post('/broadcast-store/:storeId', async (req, res) => {
+    const { storeId } = req.params;
+    const { title, message, icon, url, image, buttons } = req.body;
+
+    try {
+        console.log(`📢 Store-specific broadcast to: ${storeId}`);
+
+        // Get subscriptions for this store only
+        const subscriptions = await SubscriptionModel.findByStore(storeId);
+        console.log(`📊 Found ${subscriptions.length} subscribers for store: ${storeId}`);
+
+        if (subscriptions.length === 0) {
+            return res.json({
+                success: true,
+                message: `No subscribers found for store: ${storeId}`,
+                storeId: storeId,
+                sent: 0,
+                failed: 0
+            });
+        }
+
+        const options = {
+            vapidDetails: {
+                subject: 'mailto:admin@zyrajewel.co.in',
+                publicKey: process.env.PUBLIC_KEY,
+                privateKey: process.env.PRIVATE_KEY,
+            },
+            TTL: 24 * 60 * 60,
+        };
+
+        let successCount = 0;
+        let failCount = 0;
+        const errors = [];
+
+        const payload = JSON.stringify({
+            title: title || 'New Notification',
+            body: message || 'You have a new update!',
+            icon: icon || '/icon.png',
+            image: image || null,
+            badge: '/badge.png',
+            vibrate: [200, 100, 200],
+            tag: `store-${storeId}-${Date.now()}`,
+            requireInteraction: false,
+            actions: buttons || [],
+            data: {
+                url: url || '/',
+                storeId: storeId,
+                timestamp: Date.now()
+            }
+        });
+
+        const promises = subscriptions.map(async (sub) => {
+            try {
+                if (!sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+                    throw new Error('Invalid subscription structure');
+                }
+
+                await webpush.sendNotification(sub, payload, options);
+                successCount++;
+                console.log(`✅ Sent to ${sub._id} (${sub.storeName})`);
+            } catch (err) {
+                failCount++;
+                console.error(`❌ Failed to send to ${sub._id}:`, err.message);
+
+                errors.push({
+                    subscriptionId: sub._id,
+                    error: err.message,
+                    statusCode: err.statusCode
+                });
+
+                // Delete expired subscriptions
+                if (err.statusCode === 410 || err.statusCode === 404) {
+                    await SubscriptionModel.deleteOne({ _id: sub._id });
+                    console.log(`🗑️ Deleted expired subscription ${sub._id}`);
+                }
+            }
+        });
+
+        await Promise.all(promises);
+
+        console.log(`📊 Store broadcast complete for ${storeId}: ${successCount} sent, ${failCount} failed`);
+
+        res.json({
+            success: true,
+            storeId: storeId,
+            storeName: subscriptions[0]?.storeName || 'Unknown',
+            totalSubscribers: subscriptions.length,
+            sent: successCount,
+            failed: failCount,
+            errors: errors.slice(0, 10),
+            message: `Broadcast sent to ${successCount} subscribers in ${storeId}`
+        });
+    } catch (error) {
+        console.error('❌ Store broadcast error:', error);
+        res.status(500).json({
+            success: false,
+            storeId: storeId,
+            error: error.message
+        });
+    }
+});
+
+// 📊 Get stats for specific store
+app.get('/stats/:storeId', async (req, res) => {
+    try {
+        const { storeId } = req.params;
+        const subscriptions = await SubscriptionModel.findByStore(storeId);
+
+        res.json({
+            storeId: storeId,
+            count: subscriptions.length,
+            storeName: subscriptions[0]?.storeName || 'Unknown',
+            storeDomain: subscriptions[0]?.storeDomain || 'Unknown'
+        });
+    } catch (error) {
+        console.error('❌ Stats error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 🏪 Get all stores with subscriber counts
+app.get('/stores', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                store_id,
+                store_name,
+                store_domain,
+                COUNT(*) as subscriber_count,
+                MAX(created_at) as last_subscription
+            FROM subscriptions
+            WHERE store_id IS NOT NULL
+            GROUP BY store_id, store_name, store_domain
+            ORDER BY subscriber_count DESC
+        `;
+
+        const { Pool } = require('pg');
+        const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+
+        const result = await pool.query(query);
+
+        res.json({
+            success: true,
+            totalStores: result.rows.length,
+            stores: result.rows.map(row => ({
+                id: row.store_id,
+                name: row.store_name,
+                domain: row.store_domain,
+                subscribers: parseInt(row.subscriber_count),
+                lastSubscription: row.last_subscription
+            }))
+        });
+    } catch (error) {
+        console.error('❌ Stores list error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Test single notification with full data
 app.post('/test-notification', async (req, res) => {
     const { title, message, image, buttons } = req.body;

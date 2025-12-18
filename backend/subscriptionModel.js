@@ -12,14 +12,21 @@ const initTable = async () => {
     const query = `
         CREATE TABLE IF NOT EXISTS subscriptions (
             id SERIAL PRIMARY KEY,
-            endpoint TEXT,
+            endpoint TEXT UNIQUE,
             expiration_time BIGINT,
-            keys JSONB
+            keys JSONB,
+            store_id TEXT,
+            store_name TEXT,
+            store_domain TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
         );
+        
+        CREATE INDEX IF NOT EXISTS idx_store_id ON subscriptions(store_id);
+        CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
     `;
     try {
         await pool.query(query);
-        console.log('✅ Subscriptions table ready');
+        console.log('✅ Subscriptions table ready with multi-store support');
     } catch (err) {
         console.error('❌ Error creating table:', err);
     }
@@ -31,30 +38,58 @@ const SubscriptionModel = {
     create: async (data) => {
         console.log('💾 Creating subscription with data:', {
             endpoint: data.endpoint ? data.endpoint.substring(0, 50) + '...' : 'MISSING',
-            keys: data.keys ? 'present' : 'MISSING'
+            keys: data.keys ? 'present' : 'MISSING',
+            storeId: data.storeId || 'not-provided',
+            storeName: data.storeName || 'not-provided'
         });
-        
+
         const query = `
-            INSERT INTO subscriptions (endpoint, expiration_time, keys)
-            VALUES ($1, $2, $3)
+            INSERT INTO subscriptions (
+                endpoint, 
+                expiration_time, 
+                keys,
+                store_id,
+                store_name,
+                store_domain
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (endpoint) 
+            DO UPDATE SET 
+                expiration_time = EXCLUDED.expiration_time,
+                keys = EXCLUDED.keys,
+                store_id = EXCLUDED.store_id,
+                store_name = EXCLUDED.store_name,
+                store_domain = EXCLUDED.store_domain
             RETURNING *;
         `;
-        
+
         const endpoint = data.endpoint;
         const expirationTime = data.expirationTime || null;
-        // Store keys as JSONB - PostgreSQL will handle JSON serialization
         const keys = data.keys;
-        
+        const storeId = data.storeId || null;
+        const storeName = data.storeName || null;
+        const storeDomain = data.storeDomain || null;
+
         try {
-            const res = await pool.query(query, [endpoint, expirationTime, keys]);
+            const res = await pool.query(query, [
+                endpoint,
+                expirationTime,
+                keys,
+                storeId,
+                storeName,
+                storeDomain
+            ]);
             const row = res.rows[0];
-            
-            console.log('✅ Subscription created, returned keys type:', typeof row.keys);
-            
+
+            console.log('✅ Subscription created for store:', row.store_name || 'unknown');
+
             return {
                 endpoint: row.endpoint,
                 expirationTime: row.expiration_time,
-                keys: row.keys, // PostgreSQL returns JSONB as object, not string
+                keys: row.keys,
+                storeId: row.store_id,
+                storeName: row.store_name,
+                storeDomain: row.store_domain,
                 _id: row.id
             };
         } catch (err) {
@@ -67,12 +102,12 @@ const SubscriptionModel = {
         try {
             const res = await pool.query('SELECT * FROM subscriptions');
             console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
-            
+
             const formatted = res.rows.map((row, idx) => {
                 try {
                     // PostgreSQL returns JSONB as JavaScript object
                     const keys = row.keys;
-                    
+
                     console.log(`✅ Subscription ${idx + 1}:`, {
                         id: row.id,
                         endpoint: row.endpoint ? row.endpoint.substring(0, 50) + '...' : 'MISSING',
@@ -80,7 +115,7 @@ const SubscriptionModel = {
                         hasP256dh: keys?.p256dh ? 'yes' : 'no',
                         hasAuth: keys?.auth ? 'yes' : 'no'
                     });
-                    
+
                     return {
                         endpoint: row.endpoint,
                         expirationTime: row.expiration_time,
@@ -92,7 +127,7 @@ const SubscriptionModel = {
                     return null;
                 }
             }).filter(sub => sub !== null);
-            
+
             console.log(`✅ Returning ${formatted.length} valid subscriptions`);
             return formatted;
         } catch (err) {
@@ -105,6 +140,34 @@ const SubscriptionModel = {
         if (!filter._id) return;
         const query = 'DELETE FROM subscriptions WHERE id = $1';
         await pool.query(query, [filter._id]);
+    },
+
+    // Find subscriptions by store
+    findByStore: async (storeId) => {
+        console.log(`🔍 Finding subscriptions for store: ${storeId}`);
+        try {
+            const query = 'SELECT * FROM subscriptions WHERE store_id = $1';
+            const res = await pool.query(query, [storeId]);
+
+            const formatted = res.rows.map((row) => {
+                const keys = row.keys;
+                return {
+                    endpoint: row.endpoint,
+                    expirationTime: row.expiration_time,
+                    keys: keys,
+                    storeId: row.store_id,
+                    storeName: row.store_name,
+                    storeDomain: row.store_domain,
+                    _id: row.id
+                };
+            });
+
+            console.log(`✅ Found ${formatted.length} subscriptions for store: ${storeId}`);
+            return formatted;
+        } catch (err) {
+            console.error('❌ Error in findByStore():', err.message);
+            throw err;
+        }
     },
 
     deleteAll: async () => {
