@@ -1,3 +1,4 @@
+// Push Notification Backend - v1.0.1 - Multi-Store Support
 require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
