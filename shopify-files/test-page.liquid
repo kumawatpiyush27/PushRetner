@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Notification Test - Dupatta Bazaar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .status.show {
+            display: block;
+        }
+        
+        .status.success {
+            background: #ecfdf5;
+            color: #047857;
+            border-left: 4px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .status.info {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .console {
+            background: #1a1a2e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .console.show {
+            display: block;
+        }
+        
+        .console-line {
+            margin-bottom: 5px;
+        }
+        
+        .icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔔</div>
+        <h1>Push Notification Test</h1>
+        <p>Test your push notification setup for Dupatta Bazaar</p>
+        
+        <button class="btn btn-primary" onclick="testSubscribe()">
+            🚀 Subscribe to Notifications
+        </button>
+        
+        <button class="btn btn-secondary" onclick="checkStatus()">
+            📊 Check Status
+        </button>
+        
+        <button class="btn btn-secondary" onclick="toggleConsole()">
+            💻 Toggle Console
+        </button>
+        
+        <div id="status" class="status"></div>
+        <div id="console" class="console"></div>
+    </div>
+
+    <script src="{{ 'push-notification-helper.js' | asset_url }}"></script>
+    <script>
+        let consoleVisible = false;
+
+        function log(message, type = 'info') {
+            console.log(message);
+            const consoleEl = document.getElementById('console');
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type} show`;
+            log(message, type);
+        }
+
+        async function testSubscribe() {
+            showStatus('Starting subscription...', 'info');
+            log('🔔 Starting subscription process...');
+            
+            if (!window.PushNotifications) {
+                showStatus('Error: Push notification helper not loaded', 'error');
+                return;
+            }
+
+            const result = await window.PushNotifications.subscribe();
+            
+            if (result.success) {
+                showStatus('✅ Successfully subscribed!', 'success');
+                log('✅ Subscription successful!');
+            } else {
+                showStatus('❌ Subscription failed: ' + result.error, 'error');
+                log('❌ Error: ' + result.error);
+            }
+        }
+
+        async function checkStatus() {
+            showStatus('Checking status...', 'info');
+            log('📊 Checking status...');
+            
+            if (!window.PushNotifications) {
+                showStatus('Error: Push notification helper not loaded', 'error');
+                return;
+            }
+
+            const status = await window.PushNotifications.checkStatus();
+            const subscribed = await window.PushNotifications.isSubscribed();
+            
+            const message = `Registrations: ${status.registrations}, Subscribed: ${subscribed}`;
+            showStatus(message, 'info');
+            log(message);
+        }
+
+        function toggleConsole() {
+            consoleVisible = !consoleVisible;
+            const consoleEl = document.getElementById('console');
+            if (consoleVisible) {
+                consoleEl.classList.add('show');
+                log('Console opened');
+            } else {
+                consoleEl.classList.remove('show');
+            }
+        }
+
+        // Log on load
+        window.addEventListener('load', () => {
+            log('🚀 Page loaded');
+            log('Push Notifications available: ' + !!window.PushNotifications);
+        });
+    </script>
+</body>
+</html>
