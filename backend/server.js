@@ -1429,6 +1429,276 @@ app.post('/test-notification', async (req, res) => {
     }
 });
 
+// ========== SHOPIFY INTEGRATION ROUTES ==========
+// Serve service worker for Shopify at /apps/push/sw.js
+app.get('/apps/push/sw.js', (req, res) => {
+    console.log('📢 Shopify Service Worker requested at /apps/push/sw.js');
+    res.set('Service-Worker-Allowed', '/apps/push/');
+    res.set('Content-Type', 'application/javascript');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Access-Control-Allow-Origin', '*');
+    
+    // Serve the same service worker
+    res.status(200).send(`
+        self.addEventListener('install', function(event) {
+            self.skipWaiting();
+        });
+
+        self.addEventListener('activate', function(event) {
+            event.waitUntil(clients.claim());
+        });
+
+        self.addEventListener('push', async function (event) {
+            try {
+                const message = await event.data.json();
+                let { title, body, icon, badge, actions, data, requireInteraction, tag } = message;
+
+                console.log('🔔 Push notification received:', {
+                    title,
+                    body,
+                    hasIcon: !!icon,
+                    actionsCount: actions ? actions.length : 0
+                });
+
+                const notificationOptions = {
+                    body: body || 'You have a new notification',
+                    icon: icon,
+                    badge: badge,
+                    vibrate: [200, 100, 200],
+                    tag: tag || 'notification-' + Date.now(),
+                    requireInteraction: requireInteraction || false,
+                    data: data || {}
+                };
+
+                if (actions && actions.length > 0) {
+                    notificationOptions.actions = actions;
+                }
+
+                await event.waitUntil(
+                    self.registration.showNotification(title, notificationOptions)
+                );
+            } catch (error) {
+                console.error('❌ Error showing notification:', error);
+            }
+        });
+
+        self.addEventListener('notificationclick', function (event) {
+            event.notification.close();
+            let urlToOpen = '/';
+            
+            if (event.action) {
+                if (event.action.startsWith('http')) {
+                    urlToOpen = event.action;
+                } else {
+                    urlToOpen = event.notification.data.url || '/';
+                }
+            } else if (event.notification.data && event.notification.data.url) {
+                urlToOpen = event.notification.data.url;
+            }
+
+            event.waitUntil(
+                clients.openWindow(urlToOpen)
+            );
+        });
+    `);
+});
+
+// Shopify subscribe endpoint
+app.post('/apps/push/subscribe', async (req, res) => {
+    console.log('📢 Shopify Subscribe endpoint called');
+    console.log('Request body:', req.body);
+    
+    try {
+        const { subscription } = req.body;
+        
+        if (!subscription || !subscription.endpoint) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid subscription object'
+            });
+        }
+
+        // Store subscription in database
+        await SubscriptionModel.addSubscription(subscription);
+        
+        console.log('✅ Shopify subscription stored:', subscription.endpoint);
+        
+        res.status(201).json({
+            success: true,
+            message: 'Subscription created successfully for Shopify',
+            subscriptionId: subscription.endpoint
+        });
+    } catch (error) {
+        console.error('❌ Shopify subscription error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create subscription',
+            error: error.message
+        });
+    }
+});
+
+// Shopify test notification endpoint
+app.post('/apps/push/test-notification', async (req, res) => {
+    console.log('📢 Shopify Test Notification endpoint called');
+    
+    try {
+        const { title = 'Test Notification', body = 'This is a test from Shopify' } = req.body;
+        
+        // Get all subscriptions
+        const subscriptions = await SubscriptionModel.getSubscriptions();
+        
+        if (subscriptions.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No subscriptions found'
+            });
+        }
+
+        const payload = JSON.stringify({
+            title: title,
+            body: body,
+            icon: '/icon-192x192.png',
+            badge: '/badge-72x72.png'
+        });
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Send to all subscriptions
+        for (const sub of subscriptions) {
+            try {
+                const parsedSub = typeof sub.subscription === 'string' 
+                    ? JSON.parse(sub.subscription) 
+                    : sub.subscription;
+                    
+                await webPush.sendNotification(parsedSub, payload);
+                successCount++;
+            } catch (error) {
+                console.error('Failed to send to subscription:', error.message);
+                failureCount++;
+                
+                // Remove invalid subscriptions
+                if (error.statusCode === 410) {
+                    await SubscriptionModel.removeSubscription(sub.endpoint);
+                }
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Test notification sent',
+            successCount,
+            failureCount,
+            totalSubscriptions: subscriptions.length
+        });
+    } catch (error) {
+        console.error('❌ Shopify test notification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send test notification',
+            error: error.message
+        });
+    }
+});
+
+// Shopify broadcast endpoint
+app.post('/apps/push/broadcast', async (req, res) => {
+    console.log('📢 Shopify Broadcast endpoint called');
+    
+    try {
+        const { title, body, icon, badge, url } = req.body;
+        
+        if (!title || !body) {
+            return res.status(400).json({
+                success: false,
+                message: 'Title and body are required'
+            });
+        }
+
+        const subscriptions = await SubscriptionModel.getSubscriptions();
+        
+        if (subscriptions.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No subscriptions found'
+            });
+        }
+
+        const payload = JSON.stringify({
+            title: title,
+            body: body,
+            icon: icon || '/icon-192x192.png',
+            badge: badge || '/badge-72x72.png',
+            data: {
+                url: url || '/'
+            }
+        });
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const sub of subscriptions) {
+            try {
+                const parsedSub = typeof sub.subscription === 'string' 
+                    ? JSON.parse(sub.subscription) 
+                    : sub.subscription;
+                    
+                await webPush.sendNotification(parsedSub, payload);
+                successCount++;
+            } catch (error) {
+                console.error('Failed to send to subscription:', error.message);
+                failureCount++;
+                
+                if (error.statusCode === 410) {
+                    await SubscriptionModel.removeSubscription(sub.endpoint);
+                }
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Broadcast notification sent',
+            successCount,
+            failureCount,
+            totalSubscriptions: subscriptions.length
+        });
+    } catch (error) {
+        console.error('❌ Shopify broadcast error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to broadcast notification',
+            error: error.message
+        });
+    }
+});
+
+// Shopify stats endpoint
+app.get('/apps/push/stats', async (req, res) => {
+    try {
+        const subscriptions = await SubscriptionModel.getSubscriptions();
+        
+        res.status(200).json({
+            success: true,
+            totalSubscriptions: subscriptions.length,
+            subscriptions: subscriptions.map(s => ({
+                id: s.id,
+                endpoint: s.endpoint,
+                createdAt: s.created_at
+            }))
+        });
+    } catch (error) {
+        console.error('❌ Shopify stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch stats',
+            error: error.message
+        });
+    }
+});
+
 // Connect to MongoDB and start server
 // Connect to MongoDB
 // MongoDB connection removed - using Postgres via SubscriptionModel
