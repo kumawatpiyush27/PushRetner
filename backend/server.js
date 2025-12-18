@@ -10,6 +10,11 @@ const port = 9000;
 
 const fs = require('fs');
 
+// Middleware - MUST be before routes
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Explicitly serve sw.js with Service-Worker-Allowed header (Matches /sw.js AND /apps/push/sw.js)
 // Explicitly serve sw.js with Service-Worker-Allowed header
 app.get('/sw.js', (req, res) => {
