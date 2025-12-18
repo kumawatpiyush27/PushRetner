@@ -94,7 +94,8 @@ app.use(express.static('public'));
 app.use(express.static('../frontend/build'));
 
 app.get('/', (req, res) => {
-    res.sendFile(require('path').join(__dirname, '../frontend/build/index.html'));
+    // Redirect to the Admin Dashboard for now
+    res.redirect('/admin');
 });
 
 // Subscribe Page Endpoint (Popup Window)
