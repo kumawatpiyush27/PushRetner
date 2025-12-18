@@ -1,14 +1,24 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
+let pool;
+let isInitialized = false;
+
+const getPool = () => {
+    if (!pool) {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: {
+                rejectUnauthorized: false
+            }
+        });
     }
-});
+    return pool;
+};
 
 const initTable = async () => {
+    if (isInitialized) return;
+
     const query = `
         CREATE TABLE IF NOT EXISTS subscriptions (
             id SERIAL PRIMARY KEY,
@@ -18,14 +28,14 @@ const initTable = async () => {
         );
     `;
     try {
-        await pool.query(query);
+        await getPool().query(query);
         console.log('✅ Subscriptions table ready');
+        isInitialized = true;
     } catch (err) {
         console.error('❌ Error creating table:', err);
+        throw err;
     }
 };
-
-initTable();
 
 const SubscriptionModel = {
     create: async (data) => {
@@ -33,24 +43,25 @@ const SubscriptionModel = {
             endpoint: data.endpoint ? data.endpoint.substring(0, 50) + '...' : 'MISSING',
             keys: data.keys ? 'present' : 'MISSING'
         });
-        
+
         const query = `
             INSERT INTO subscriptions (endpoint, expiration_time, keys)
             VALUES ($1, $2, $3)
             RETURNING *;
         `;
-        
+
         const endpoint = data.endpoint;
         const expirationTime = data.expirationTime || null;
         // Store keys as JSONB - PostgreSQL will handle JSON serialization
         const keys = data.keys;
-        
+
         try {
-            const res = await pool.query(query, [endpoint, expirationTime, keys]);
+            await initTable();
+            const res = await getPool().query(query, [endpoint, expirationTime, keys]);
             const row = res.rows[0];
-            
+
             console.log('✅ Subscription created, returned keys type:', typeof row.keys);
-            
+
             return {
                 endpoint: row.endpoint,
                 expirationTime: row.expiration_time,
@@ -65,14 +76,15 @@ const SubscriptionModel = {
 
     find: async () => {
         try {
-            const res = await pool.query('SELECT * FROM subscriptions');
+            await initTable();
+            const res = await getPool().query('SELECT * FROM subscriptions');
             console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
-            
+
             const formatted = res.rows.map((row, idx) => {
                 try {
                     // PostgreSQL returns JSONB as JavaScript object
                     const keys = row.keys;
-                    
+
                     console.log(`✅ Subscription ${idx + 1}:`, {
                         id: row.id,
                         endpoint: row.endpoint ? row.endpoint.substring(0, 50) + '...' : 'MISSING',
@@ -80,7 +92,7 @@ const SubscriptionModel = {
                         hasP256dh: keys?.p256dh ? 'yes' : 'no',
                         hasAuth: keys?.auth ? 'yes' : 'no'
                     });
-                    
+
                     return {
                         endpoint: row.endpoint,
                         expirationTime: row.expiration_time,
@@ -92,7 +104,7 @@ const SubscriptionModel = {
                     return null;
                 }
             }).filter(sub => sub !== null);
-            
+
             console.log(`✅ Returning ${formatted.length} valid subscriptions`);
             return formatted;
         } catch (err) {
@@ -103,13 +115,15 @@ const SubscriptionModel = {
 
     deleteOne: async (filter) => {
         if (!filter._id) return;
+        await initTable();
         const query = 'DELETE FROM subscriptions WHERE id = $1';
-        await pool.query(query, [filter._id]);
+        await getPool().query(query, [filter._id]);
     },
 
     deleteAll: async () => {
+        await initTable();
         const query = 'DELETE FROM subscriptions';
-        const result = await pool.query(query);
+        const result = await getPool().query(query);
         return result;
     }
 };
