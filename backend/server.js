@@ -23,6 +23,14 @@ app.get('/sw.js', (req, res) => {
 
     // Return raw JS string to avoid any file system errors (500)
     res.status(200).send(`
+        self.addEventListener('install', function(event) {
+            self.skipWaiting();
+        });
+
+        self.addEventListener('activate', function(event) {
+            event.waitUntil(clients.claim());
+        });
+
         self.addEventListener('push', async function (event) {
             try {
                 const message = await event.data.json();
