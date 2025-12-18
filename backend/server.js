@@ -1041,8 +1041,36 @@ app.get('/subscribe', (req, res) => {
 app.post('/subscribe', async (req, res) => {
     try {
         console.log('🔔 Received subscription request');
-        const newSubscription = await SubscriptionModel.create({ ...req.body });
-        console.log('✅ New User Subscribed & Stored in DB! ID:', newSubscription.id);
+        console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+
+        // Validate required fields
+        if (!req.body.endpoint) {
+            console.error('❌ Missing endpoint in request');
+            return res.status(400).json({ error: 'Missing endpoint' });
+        }
+
+        if (!req.body.keys || !req.body.keys.p256dh || !req.body.keys.auth) {
+            console.error('❌ Missing or invalid keys in request');
+            return res.status(400).json({ error: 'Missing encryption keys' });
+        }
+
+        console.log('✅ Validation passed, creating subscription...');
+
+        try {
+            const newSubscription = await SubscriptionModel.create({ ...req.body });
+            console.log('✅ New User Subscribed & Stored in DB! ID:', newSubscription._id || newSubscription.id);
+            console.log('📊 Store Info:', {
+                storeId: newSubscription.storeId,
+                storeName: newSubscription.storeName
+            });
+        } catch (dbError) {
+            console.error('❌ Database error:', dbError.message);
+            console.error('Stack:', dbError.stack);
+            return res.status(500).json({
+                error: 'Database error',
+                details: dbError.message
+            });
+        }
 
         if (!process.env.PUBLIC_KEY || !process.env.PRIVATE_KEY) {
             console.error('❌ Missing VAPID Keys in Environment Variables');
@@ -1051,40 +1079,42 @@ app.post('/subscribe', async (req, res) => {
 
         const options = {
             vapidDetails: {
-                subject: 'mailto:admin@zyrajewel.co.in', // Changed to look like a real domain
+                subject: 'mailto:admin@zyrajewel.co.in',
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             },
-            TTL: 24 * 60 * 60, // 24 hours TTL in seconds
+            TTL: 24 * 60 * 60,
         };
 
         console.log('📤 Sending welcome notification...');
         try {
-            // Format subscription properly for webPush
             const subscription = {
-                endpoint: newSubscription.endpoint,
-                keys: newSubscription.keys
+                endpoint: req.body.endpoint,
+                keys: req.body.keys
             };
 
             await webPush.sendNotification(
                 subscription,
                 JSON.stringify({
-                    title: 'Welcome to Zyra Jewel!',
-                    description: 'You will now receive updates about our latest collections.',
-                    image: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    title: 'Welcome!',
+                    body: 'You will now receive updates about our latest collections.',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
                 }),
                 options
             );
             console.log('✅ Welcome notification sent');
         } catch (pushError) {
-            console.error('⚠️ Failed to send welcome notification (but subscription saved):', pushError);
-            // Don't fail the request if just the notification fails, as subscription is saved
+            console.error('⚠️ Failed to send welcome notification (but subscription saved):', pushError.message);
         }
 
         res.status(200).json({ success: true, message: 'Subscribed successfully' });
     } catch (error) {
-        console.error('❌ Error in /subscribe:', error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        console.error('❌ Error in /subscribe:', error.message);
+        console.error('Stack trace:', error.stack);
+        res.status(500).json({
+            error: error.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
