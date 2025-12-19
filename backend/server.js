@@ -66,7 +66,6 @@ app.post('/subscribe', async (req, res) => {
         console.log('🔔 Subscribe Request:', req.body.storeId);
         await SubscriptionModel.create(req.body);
 
-        // Send Welcome Notification
         const options = {
             vapidDetails: {
                 subject: 'mailto:admin@zyrajewel.co.in',
@@ -89,9 +88,7 @@ app.post('/subscribe', async (req, res) => {
     }
 });
 
-// Shopify App Proxy Subscribe (Alias)
 app.post('/apps/push/subscribe', async (req, res) => {
-    // Forward to main subscribe handler logic
     try {
         await SubscriptionModel.create(req.body);
         res.json({ success: true });
@@ -101,29 +98,67 @@ app.post('/apps/push/subscribe', async (req, res) => {
 });
 
 // =====================================================
-// 🔐 STORE LOGIN WITH MASTER PASSWORD
+// 🔐 STORE AUTHENTICATION
 // =====================================================
+
+// Login
 app.post('/store-login', async (req, res) => {
     const { storeId, password } = req.body;
     console.log(`🔐 Login attempt for: ${storeId}`);
 
-    // MASTER PASSWORD CHECK
-    if (password === 'admin123' || password === 'zyra123') {
-        console.log('✅ Master Password Accepted!');
+    try {
+        // Check DB
+        const result = await pool.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
+        const store = result.rows[0];
 
-        // Generate a fake but valid token
-        return res.json({
-            success: true,
-            token: 'master-token-' + Date.now(),
-            store: {
-                id: storeId,
-                name: storeId.charAt(0).toUpperCase() + storeId.slice(1), // Capitalize
-                domain: `${storeId}.myshopify.com`
-            }
-        });
+        // MASTER PASSWORD or DB PASSWORD
+        if (password === 'admin123' || (store && store.password === password)) {
+            console.log('✅ Login Successful!');
+            return res.json({
+                success: true,
+                token: 'token-' + Date.now(),
+                store: {
+                    id: storeId,
+                    name: store ? store.store_name : storeId,
+                    domain: `${storeId}.myshopify.com`
+                }
+            });
+        }
+        res.status(401).json({ success: false, error: 'Invalid Store ID or Password' });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
+});
 
-    return res.status(401).json({ success: false, error: 'Invalid password' });
+// Create Account (Register)
+app.post('/store-register', async (req, res) => {
+    const { storeId, password, storeName } = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO stores (store_id, password, store_name) VALUES ($1, $2, $3)
+             ON CONFLICT (store_id) DO UPDATE SET password = $2, store_name = $3`,
+            [storeId, password, storeName]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Forgot Password (Show Password)
+app.post('/store-forgot', async (req, res) => {
+    const { storeId } = req.body;
+    try {
+        const result = await pool.query('SELECT password FROM stores WHERE store_id = $1', [storeId]);
+        if (result.rows.length > 0) {
+            res.json({ success: true, password: result.rows[0].password });
+        } else {
+            res.json({ success: false, error: 'Store ID not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Store Admin Dashboard HTML
@@ -135,43 +170,80 @@ app.get('/store-admin', (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Store Admin</title>
     <style>
-        body { font-family: sans-serif; background: #667eea; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 10px; width: 400px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #5a6fd6; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 40px; border-radius: 12px; width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #1a1a1a; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background: #008060; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 10px; }
+        button:hover { background: #004c3f; }
         .hidden { display: none; }
+        .link { color: #008060; cursor: pointer; text-decoration: underline; font-size: 14px; display: block; margin-top: 10px; text-align: center; }
+        .secondary-btn { background: #6c757d; }
+        .secondary-btn:hover { background: #5a6268; }
+        #forgotSection, #registerSection { border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px; }
+        .stats-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        .stats-num { font-size: 24px; font-weight: bold; color: #008060; }
     </style>
 </head>
 <body>
+    <!-- LOGIN FORM -->
     <div class="container" id="loginForm">
-        <h2>🔐 Login</h2>
+        <h2>🔐 Store Login</h2>
         <input type="text" id="storeId" placeholder="Store ID (e.g. zyrajewel)">
         <input type="password" id="password" placeholder="Password">
         <button onclick="login()">Login</button>
+        
+        <a class="link" onclick="toggleForgot()">Forgot Password?</a>
+        <a class="link" onclick="toggleRegister()">Create New Account</a>
+
+        <!-- FORGOT PASSWORD SECTION -->
+        <div id="forgotSection" class="hidden">
+            <h3>🔑 Recover Password</h3>
+            <p style="font-size: 13px; color: #666;">Enter your Store ID to see your password.</p>
+            <input type="text" id="forgotStoreId" placeholder="Enter Store ID">
+            <button class="secondary-btn" onclick="recoverPassword()">Show Password</button>
+            <p id="passwordDisplay" style="font-weight: bold; color: #d63031; text-align: center; margin-top: 10px;"></p>
+        </div>
+
+        <!-- REGISTER SECTION -->
+        <div id="registerSection" class="hidden">
+            <h3>📝 Create Account</h3>
+            <input type="text" id="regStoreId" placeholder="Store ID (e.g. mybrand)">
+            <input type="text" id="regStoreName" placeholder="Store Name (e.g. My Brand)">
+            <input type="password" id="regPassword" placeholder="Set Password">
+            <button class="secondary-btn" onclick="register()">Create Account</button>
+        </div>
     </div>
 
+    <!-- DASHBOARD -->
     <div class="container hidden" id="dashboard">
         <h2 id="dashTitle">Store Dashboard</h2>
-        <p>Subscribers: <strong id="subCount">0</strong></p>
-        <hr>
-        <h3>Send Notification</h3>
-        <input type="text" id="title" placeholder="Title">
-        <textarea id="message" placeholder="Message"></textarea>
-        <input type="text" id="url" placeholder="Link URL">
+        
+        <div class="stats-box">
+            <div>Total Subscribers</div>
+            <div class="stats-num" id="subCount">0</div>
+        </div>
+
+        <h3>📢 Send Notification</h3>
+        <input type="text" id="title" placeholder="Campaign Title">
+        <textarea id="message" placeholder="Campaign Message"></textarea>
+        <input type="text" id="url" placeholder="Link URL (Optional)">
         <button onclick="sendBroadcast()">🚀 Send Broadcast</button>
-        <br><br>
-        <button onclick="logout()" style="background: #ccc; color: #333">Logout</button>
+        
+        <button onclick="logout()" style="background: #ccc; color: #333; margin-top: 20px;">Logout</button>
     </div>
 
     <script>
+        // Check session
         let store = JSON.parse(localStorage.getItem('store') || 'null');
-
         if(store) showDashboard();
 
+        // --- LOGIN ---
         async function login() {
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
+            if(!storeId || !password) return alert('Please enter details');
+
             const res = await fetch('/store-login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -187,9 +259,9 @@ app.get('/store-admin', (req, res) => {
             }
         }
 
+        // --- DASHBOARD ---
         function showDashboard() {
-            document.getElementById('loginForm').class = 'hidden'; // Simply hide login
-            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('loginForm').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('dashTitle').innerText = store.name;
             loadStats();
@@ -206,18 +278,81 @@ app.get('/store-admin', (req, res) => {
             const message = document.getElementById('message').value;
             const url = document.getElementById('url').value;
             
+            const btn = document.querySelector('button[onclick="sendBroadcast()"]');
+            btn.innerText = 'Sending...';
+            btn.disabled = true;
+
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ storeId: store.id, title, message, url })
             });
             const data = await res.json();
-            alert(data.success ? '✅ Sent!' : '❌ Failed');
+            
+            btn.innerText = '🚀 Send Broadcast';
+            btn.disabled = false;
+            
+            if(data.success) {
+                alert('✅ Sent to ' + data.sent + ' subscribers!');
+                document.getElementById('title').value = '';
+                document.getElementById('message').value = '';
+            } else {
+                alert('❌ Failed: ' + data.error);
+            }
         }
 
         function logout() {
             localStorage.removeItem('store');
             location.reload();
+        }
+
+        // --- EXTRAS ---
+        function toggleForgot() {
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('forgotSection').classList.toggle('hidden');
+        }
+
+        function toggleRegister() {
+            document.getElementById('forgotSection').classList.add('hidden');
+            document.getElementById('registerSection').classList.toggle('hidden');
+        }
+
+        async function register() {
+            const storeId = document.getElementById('regStoreId').value;
+            const password = document.getElementById('regPassword').value;
+            const storeName = document.getElementById('regStoreName').value;
+
+            const res = await fetch('/store-register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ storeId, password, storeName })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert('✅ Account Created! You can now login.');
+                toggleRegister();
+                document.getElementById('storeId').value = storeId;
+                document.getElementById('password').value = password;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+
+        async function recoverPassword() {
+            const storeId = document.getElementById('forgotStoreId').value;
+            if(!storeId) return alert('Enter Store ID');
+
+            const res = await fetch('/store-forgot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ storeId })
+            });
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('passwordDisplay').innerText = 'Your Password: ' + data.password;
+            } else {
+                document.getElementById('passwordDisplay').innerText = '❌ Store ID not found';
+            }
         }
     </script>
 </body>
@@ -238,7 +373,6 @@ app.post('/my-store/broadcast', async (req, res) => {
     const { storeId, title, message, url } = req.body;
     try {
         const subs = await SubscriptionModel.findByStore(storeId);
-        console.log(`🚀 Sending broadcast to ${subs.length} subs for store ${storeId}`);
 
         const options = {
             vapidDetails: {
