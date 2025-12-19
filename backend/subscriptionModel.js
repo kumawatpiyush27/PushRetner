@@ -21,6 +21,12 @@ const initTable = async () => {
             created_at TIMESTAMP DEFAULT NOW()
         );
         
+        -- Migration for existing tables: add columns if they don't exist
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_id TEXT;
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_name TEXT;
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_domain TEXT;
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+        
         CREATE INDEX IF NOT EXISTS idx_store_id ON subscriptions(store_id);
         CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
     `;
@@ -28,7 +34,7 @@ const initTable = async () => {
         await pool.query(query);
         console.log('✅ Subscriptions table ready with multi-store support');
     } catch (err) {
-        console.error('❌ Error creating table:', err);
+        console.error('❌ Error creating/updating table:', err);
     }
 };
 

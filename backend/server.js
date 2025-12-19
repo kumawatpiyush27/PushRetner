@@ -1490,11 +1490,7 @@ app.post('/broadcast-store/:storeId', async (req, res) => {
 
         const promises = subscriptions.map(async (sub) => {
             try {
-                if (!sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
-                    throw new Error('Invalid subscription structure');
-                }
-
-                await webpush.sendNotification(sub, payload, options);
+                await webPush.sendNotification(sub, payload, options);
                 successCount++;
                 console.log(`✅ Sent to ${sub._id} (${sub.storeName})`);
             } catch (err) {
