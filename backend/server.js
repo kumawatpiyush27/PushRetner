@@ -194,9 +194,17 @@ app.get('/store-admin', (req, res) => {
         <h2>🔐 Store Login</h2>
         <input type="text" id="storeId" placeholder="Store ID (e.g. zyrajewel)">
         <input type="password" id="password" placeholder="Password">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer;">
+                <input type="checkbox" id="useMasterPassword" onchange="toggleMasterPassword()">
+                <span>Use Master Password</span>
+            </label>
+            <a class="link" onclick="toggleForgot()" style="margin: 0;">Forgot Password?</a>
+        </div>
+        
         <button onclick="login()">Login</button>
         
-        <a class="link" onclick="toggleForgot()">Forgot Password?</a>
         <a class="link" onclick="toggleRegister()">Create New Account</a>
 
         <!-- FORGOT PASSWORD SECTION -->
@@ -237,15 +245,49 @@ app.get('/store-admin', (req, res) => {
     </div>
 
     <script>
+        // Master password constant
+        const MASTER_PASSWORD = 'admin@2025';
+        
         // Check session
         let store = JSON.parse(localStorage.getItem('store') || 'null');
         if(store) showDashboard();
+        
+        // Toggle master password mode
+        function toggleMasterPassword() {
+            const checkbox = document.getElementById('useMasterPassword');
+            const storeIdInput = document.getElementById('storeId');
+            
+            if (checkbox.checked) {
+                storeIdInput.value = 'MASTER';
+                storeIdInput.disabled = true;
+                storeIdInput.style.background = '#f0f0f0';
+            } else {
+                storeIdInput.value = '';
+                storeIdInput.disabled = false;
+                storeIdInput.style.background = 'white';
+            }
+        }
 
         // --- LOGIN ---
         async function login() {
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
+            const useMaster = document.getElementById('useMasterPassword').checked;
+            
             if(!storeId || !password) return alert('Please enter details');
+            
+            // Master password bypass
+            if (useMaster && password === MASTER_PASSWORD) {
+                console.log('🔓 Master password used - bypassing authentication');
+                store = {
+                    id: 'master',
+                    name: 'Master Admin',
+                    domain: 'all-stores'
+                };
+                localStorage.setItem('store', JSON.stringify(store));
+                showDashboard();
+                return;
+            }
 
             const res = await fetch('/store-login', {
                 method: 'POST',
@@ -271,9 +313,20 @@ app.get('/store-admin', (req, res) => {
         }
 
         async function loadStats() {
-            const res = await fetch('/my-store/stats?storeId=' + store.id);
-            const data = await res.json();
-            document.getElementById('subCount').innerText = data.subscribers;
+            // If master admin, show total subscribers across all stores
+            if (store.id === 'master') {
+                try {
+                    const res = await fetch('/stats');
+                    const data = await res.json();
+                    document.getElementById('subCount').innerText = data.count || 0;
+                } catch (e) {
+                    document.getElementById('subCount').innerText = '0';
+                }
+            } else {
+                const res = await fetch('/my-store/stats?storeId=' + store.id);
+                const data = await res.json();
+                document.getElementById('subCount').innerText = data.subscribers;
+            }
         }
 
         async function sendBroadcast() {
@@ -284,11 +337,17 @@ app.get('/store-admin', (req, res) => {
             const btn = document.querySelector('button[onclick="sendBroadcast()"]');
             btn.innerText = 'Sending...';
             btn.disabled = true;
+            
+            // Master admin sends to all stores, regular admin sends to their store
+            const endpoint = store.id === 'master' ? '/broadcast' : '/my-store/broadcast';
+            const payload = store.id === 'master' 
+                ? { title, message, url }
+                : { storeId: store.id, title, message, url };
 
-            const res = await fetch('/my-store/broadcast', {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             
@@ -362,6 +421,17 @@ app.get('/store-admin', (req, res) => {
 </html>`);
 });
 
+// Stats API (All Stores - for master admin)
+app.get('/stats', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT COUNT(*) FROM subscriptions');
+        res.json({ count: parseInt(result.rows[0].count) });
+    } catch (e) {
+        console.error('Stats error:', e);
+        res.status(500).json({ count: 0 });
+    }
+});
+
 // Stats API
 app.get('/my-store/stats', async (req, res) => {
     const { storeId } = req.query;
@@ -369,6 +439,41 @@ app.get('/my-store/stats', async (req, res) => {
         const result = await pool.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         res.json({ subscribers: result.rows[0].count });
     } catch (e) { res.status(500).json({ subscribers: 0 }); }
+});
+
+// Broadcast API (All Stores - for master admin)
+app.post('/broadcast', async (req, res) => {
+    const { title, message, url } = req.body;
+    try {
+        // Get all subscriptions from all stores
+        const result = await pool.query('SELECT * FROM subscriptions');
+        const subs = result.rows;
+
+        const options = {
+            vapidDetails: {
+                subject: 'mailto:admin@zyrajewel.co.in',
+                publicKey: process.env.PUBLIC_KEY,
+                privateKey: process.env.PRIVATE_KEY,
+            }
+        };
+
+        let sent = 0;
+        for (const sub of subs) {
+            try {
+                await webPush.sendNotification(
+                    { endpoint: sub.endpoint, keys: sub.keys },
+                    JSON.stringify({ title, body: message, url }),
+                    options
+                );
+                sent++;
+            } catch (e) {
+                console.error('Push failed', e.message);
+            }
+        }
+        res.json({ success: true, sent });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // Broadcast API
