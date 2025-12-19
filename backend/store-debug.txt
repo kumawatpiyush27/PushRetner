@@ -1,0 +1,9 @@
+🔍 Checking all subscriptions in database...
+
+📊 Found 3 total subscriptions:
+
+ID | STORE_ID             | DOMAIN                       | CREATED_AT
+---|----------------------|------------------------------|---------------------
+50 | abhushanjewellers123 | zyrajewel.co.in              | 19/12/2025, 3:49:39 pm
+49 | dupattabazaar1       | dupattabazaar1.myshopify.com | 19/12/2025, 3:45:26 pm
+48 | abhushanjewellers123 | zyrajewel.co.in              | 19/12/2025, 3:44:19 pm

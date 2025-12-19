@@ -1,21 +1,11 @@
 // Push Notification Helper for Shopify
 // Place this file in your Shopify theme: Assets > push-notification-helper.js
 
-// ============================================
-// CONFIGURATION - Choose one option:
-// ============================================
+// IMPORTANT: Ensure your Shopify App Proxy (e.g., /apps/push) points to your Vercel Backend URL.
+// You do not need to hardcode the URL here if using the proxy.
+const BACKEND_URL = ''; // Kept for reference, logic uses /apps/push proxy below
 
-// OPTION 1: Direct Vercel URL (Recommended - No Shopify App needed)
-const USE_APP_PROXY = false;
-const BACKEND_URL = 'https://push-retner.vercel.app';
-
-// OPTION 2: Shopify App Proxy (Requires Shopify App setup)
-// const USE_APP_PROXY = true;
-// const BACKEND_URL = ''; // Leave empty when using proxy
-
-// ============================================
-
-// Subscribe to push notifications
+// Subscribe to push notifications (Direct App Proxy Method)
 async function subscribeToPushNotifications() {
     try {
         console.log('Step 1: Requesting Permission...');
@@ -25,13 +15,9 @@ async function subscribeToPushNotifications() {
         }
 
         console.log('Step 2: Registering SW...');
-
-        // Service Worker URL - Hosted on Shopify to avoid cross-origin issues
-        // This will be constructed dynamically based on your Shopify store
-        const swUrl = '/push-sw.js';  // Relative path - will be served from Shopify
-
-        const registration = await navigator.serviceWorker.register(swUrl, {
-            scope: '/'
+        // Note: Using the proxy path for SW to ensure it's served from the same origin
+        const registration = await navigator.serviceWorker.register('/apps/push/sw.js', {
+            scope: '/apps/push/'
         });
 
         // Wait for the service worker to be active before proceeding
@@ -56,7 +42,7 @@ async function subscribeToPushNotifications() {
         console.log('SW Active:', registration);
 
         console.log('Step 3: Creating Subscription with VAPID...');
-        // VAPID Public Key - Must match the PUBLIC_KEY in Vercel environment variables
+        // Replace this with your actual VAPID Public Key from Vercel env
         const publicVapidKey = 'BN2u6-t6iC6o0CKza2ifWfNy_OSovucgNlZwgeWoMbAYME6b5qdgdDD6WIX6c_SOAF-R15ZepMt0N4eTdFZlU04';
 
         const subscription = await registration.pushManager.subscribe({
@@ -65,17 +51,37 @@ async function subscribeToPushNotifications() {
         });
         console.log('Subscription Object Created:', JSON.stringify(subscription));
 
-        console.log('Step 4: Sending to Backend...');
+        console.log('Step 4: Sending to Backend via Proxy...');
 
-        // Subscription endpoint based on configuration
-        const subscribeUrl = USE_APP_PROXY ? '/apps/push/subscribe' : `${BACKEND_URL}/subscribe`;
+        // 🔥 DYNAMIC STORE ID: Automatically detects the store identity
+        // Priority: 1. Shopify Object 2. Hostname
+        let dynamicStoreId = 'unknown-store';
 
-        const response = await fetch(subscribeUrl, {
+        if (window.Shopify && window.Shopify.shop) {
+            // Example: 'zyrajewel.myshopify.com' -> 'zyrajewel'
+            dynamicStoreId = window.Shopify.shop.split('.')[0];
+        } else {
+            // Fallback for non-Shopify or testing: 'zyrajewel.co.in' -> 'zyrajewel'
+            const host = window.location.hostname;
+            dynamicStoreId = host.replace('www.', '').split('.')[0];
+        }
+
+        const storeName = document.title || dynamicStoreId;
+        const storeDomain = window.location.hostname;
+
+        console.log(`📍 Detected Store ID: ${dynamicStoreId}`);
+
+        const response = await fetch('/apps/push/subscribe', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(subscription)
+            body: JSON.stringify({
+                ...subscription.toJSON(),
+                storeId: dynamicStoreId,       // ✅ DYNAMIC: Automatically uses store name
+                storeName: storeName,
+                storeDomain: storeDomain
+            })
         });
 
         console.log('Server Response Status:', response.status);

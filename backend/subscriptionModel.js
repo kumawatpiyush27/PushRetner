@@ -1,14 +1,24 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
+let pool;
+let isInitialized = false;
+
+const getPool = () => {
+    if (!pool) {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: {
+                rejectUnauthorized: false
+            }
+        });
     }
-});
+    return pool;
+};
 
 const initTable = async () => {
+    if (isInitialized) return;
+
     const query = `
         CREATE TABLE IF NOT EXISTS subscriptions (
             id SERIAL PRIMARY KEY,
@@ -31,14 +41,21 @@ const initTable = async () => {
         CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
     `;
     try {
+<<<<<<< HEAD
         await pool.query(query);
         console.log('✅ Subscriptions table ready with multi-store support');
     } catch (err) {
         console.error('❌ Error creating/updating table:', err);
+=======
+        await getPool().query(query);
+        console.log('✅ Subscriptions table ready');
+        isInitialized = true;
+    } catch (err) {
+        console.error('❌ Error creating table:', err);
+        throw err;
+>>>>>>> ef013ab518ef74075890481da40eb24a2b5a772c
     }
 };
-
-initTable();
 
 const SubscriptionModel = {
     create: async (data) => {
@@ -72,6 +89,7 @@ const SubscriptionModel = {
         const endpoint = data.endpoint;
         const expirationTime = data.expirationTime || null;
         const keys = data.keys;
+<<<<<<< HEAD
         const storeId = data.storeId || null;
         const storeName = data.storeName || null;
         const storeDomain = data.storeDomain || null;
@@ -88,6 +106,15 @@ const SubscriptionModel = {
             const row = res.rows[0];
 
             console.log('✅ Subscription created for store:', row.store_name || 'unknown');
+=======
+
+        try {
+            await initTable();
+            const res = await getPool().query(query, [endpoint, expirationTime, keys]);
+            const row = res.rows[0];
+
+            console.log('✅ Subscription created, returned keys type:', typeof row.keys);
+>>>>>>> ef013ab518ef74075890481da40eb24a2b5a772c
 
             return {
                 endpoint: row.endpoint,
@@ -106,7 +133,8 @@ const SubscriptionModel = {
 
     find: async () => {
         try {
-            const res = await pool.query('SELECT * FROM subscriptions');
+            await initTable();
+            const res = await getPool().query('SELECT * FROM subscriptions');
             console.log(`📊 Database query returned ${res.rows.length} subscriptions`);
 
             const formatted = res.rows.map((row, idx) => {
@@ -144,8 +172,9 @@ const SubscriptionModel = {
 
     deleteOne: async (filter) => {
         if (!filter._id) return;
+        await initTable();
         const query = 'DELETE FROM subscriptions WHERE id = $1';
-        await pool.query(query, [filter._id]);
+        await getPool().query(query, [filter._id]);
     },
 
     // Find subscriptions by store
@@ -177,8 +206,9 @@ const SubscriptionModel = {
     },
 
     deleteAll: async () => {
+        await initTable();
         const query = 'DELETE FROM subscriptions';
-        const result = await pool.query(query);
+        const result = await getPool().query(query);
         return result;
     }
 };
