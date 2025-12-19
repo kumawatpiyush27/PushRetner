@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Notification Test - Subscribe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .browser-check {
+            background: #f0f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .browser-check.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .browser-check.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .browser-check strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.show { display: block; }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #004085;
+        }
+        .info strong { display: block; margin-bottom: 5px; }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Push Notifications Test</h1>
+        <p class="subtitle">Subscribe to receive test notifications</p>
+        
+        <div id="browserCheck" class="browser-check">
+            <strong>Checking browser compatibility...</strong>
+        </div>
+        
+        <button id="subscribeBtn" onclick="subscribe()" disabled>
+            Subscribe to Notifications
+        </button>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="info">
+            <strong>📝 Note:</strong>
+            For best results, use <strong>Google Chrome</strong> or <strong>Firefox</strong>.
+            Windows Edge notifications are unreliable.
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://push-retner.vercel.app';
+        const PUBLIC_KEY = 'BN2u6-t6iC6o0CKza2ifWfNy_OSovucgNlZwgeWoMbAYME6b5qdgdDD6WIX6c_SOAF-R15ZepMt0N4eTdFZlU04';
+
+        // Check browser compatibility
+        window.addEventListener('load', () => {
+            const browserCheck = document.getElementById('browserCheck');
+            const subscribeBtn = document.getElementById('subscribeBtn');
+            
+            // Detect browser
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            const isFirefox = /Firefox/.test(navigator.userAgent);
+            const isEdge = /Edg/.test(navigator.userAgent);
+            
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                browserCheck.className = 'browser-check error';
+                browserCheck.innerHTML = '<strong>❌ Not Supported</strong>Your browser does not support push notifications.';
+                return;
+            }
+            
+            if (isEdge) {
+                browserCheck.className = 'browser-check warning';
+                browserCheck.innerHTML = '<strong>⚠️ Edge Detected</strong>Windows Edge notifications are unreliable. Please use Chrome or Firefox for testing.';
+            } else if (isChrome) {
+                browserCheck.className = 'browser-check';
+                browserCheck.innerHTML = '<strong>✅ Chrome Detected</strong>Perfect! Chrome has excellent push notification support.';
+            } else if (isFirefox) {
+                browserCheck.className = 'browser-check';
+                browserCheck.innerHTML = '<strong>✅ Firefox Detected</strong>Great! Firefox has reliable push notification support.';
+            } else {
+                browserCheck.className = 'browser-check warning';
+                browserCheck.innerHTML = '<strong>⚠️ Unknown Browser</strong>For best results, use Chrome or Firefox.';
+            }
+            
+            subscribeBtn.disabled = false;
+        });
+
+        async function subscribe() {
+            const btn = document.getElementById('subscribeBtn');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span>Subscribing...';
+            status.className = 'status';
+            status.style.display = 'none';
+            
+            try {
+                // Step 1: Request permission
+                console.log('Step 1: Requesting permission...');
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    throw new Error('Permission denied. Please allow notifications and try again.');
+                }
+                
+                // Step 2: Register service worker
+                console.log('Step 2: Registering service worker...');
+                const registration = await navigator.serviceWorker.register(`${BACKEND_URL}/sw.js`);
+                await navigator.serviceWorker.ready;
+                console.log('Service worker registered:', registration);
+                
+                // Step 3: Subscribe to push
+                console.log('Step 3: Creating push subscription...');
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: PUBLIC_KEY
+                });
+                console.log('Subscription created:', subscription);
+                
+                // Step 4: Send to backend
+                console.log('Step 4: Sending to backend...');
+                const response = await fetch(`${BACKEND_URL}/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...subscription.toJSON(),
+                        storeId: 'test-store',
+                        storeName: 'Test Store',
+                        storeDomain: 'test.example.com'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(`Server error: ${error}`);
+                }
+                
+                const result = await response.json();
+                console.log('Backend response:', result);
+                
+                // Success!
+                status.className = 'status success show';
+                status.innerHTML = '<strong>✅ Success!</strong>You are now subscribed to push notifications. You should receive a welcome notification shortly.';
+                btn.innerHTML = '✅ Subscribed Successfully';
+                
+            } catch (error) {
+                console.error('Subscription error:', error);
+                status.className = 'status error show';
+                status.innerHTML = `<strong>❌ Error</strong>${error.message}`;
+                btn.disabled = false;
+                btn.innerHTML = 'Try Again';
+            }
+        }
+    </script>
+</body>
+</html>

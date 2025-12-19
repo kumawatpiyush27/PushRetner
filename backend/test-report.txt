@@ -1,0 +1,79 @@
+🧪 Testing all subscriptions...
+
+📊 Total subscriptions: 11
+
+❌ EXPIRED subscription 21:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/eCIJvEyz1YE:APA91bHxk2lA...
+
+❌ EXPIRED subscription 23:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/di4Qf3ENXUY:APA91bHMkBkb...
+
+❌ EXPIRED subscription 27:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 401
+   Endpoint: https://wns2-pn1p.notify.windows.com/w/?token=BQYAAAApXMwr0Z...
+
+❌ EXPIRED subscription 28:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/fHM-SLCvFfA:APA91bFgZLPc...
+
+❌ EXPIRED subscription 30:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/fJ3xam3Z4ZY:APA91bHBshH3...
+
+❌ EXPIRED subscription 33:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/fbovSC_oGfQ:APA91bGxE3ez...
+
+❌ EXPIRED subscription 36:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/d7BpFfKAjRY:APA91bGkFrs-...
+
+❌ EXPIRED subscription 38:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 403
+   Endpoint: https://fcm.googleapis.com/fcm/send/fXrmT-YJWi0:APA91bG84jDi...
+
+❌ EXPIRED subscription 35:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 401
+   Endpoint: https://wns2-pn1p.notify.windows.com/w/?token=BQYAAACC9M506d...
+
+❌ EXPIRED subscription 40:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 401
+   Endpoint: https://wns2-pn1p.notify.windows.com/w/?token=BQYAAADjZEwIiN...
+
+❌ EXPIRED subscription 41:
+   Store: unknown
+   Error: Received unexpected response code
+   Status Code: 401
+   Endpoint: https://wns2-pn1p.notify.windows.com/w/?token=BQYAAADC0QXh59...
+
+
+📊 Summary:
+   ✅ Active subscriptions: 0
+   ❌ Expired subscriptions: 11
+
+🗑️  Deleting 11 expired subscriptions...
+✅ Deleted 11 expired subscriptions
+
+📊 Final active subscription count: 0

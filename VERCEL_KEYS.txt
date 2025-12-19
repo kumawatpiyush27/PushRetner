@@ -1,0 +1,21 @@
+================================================================
+⚡ VERCEL ENVIRONMENT VARIABLES (COPY THESE EXACTLY) ⚡
+================================================================
+
+1. Go to: https://vercel.com/dashboard
+2. Select your project: push-retner
+3. Go to: Settings > Environment Variables
+4. Update/Add these values:
+
+Key: PUBLIC_KEY
+Value: BN2u6-t6iC6o0CKza2ifWfNy_OSovucgNlZwgeWoMbAYME6b5qdgdDD6WIX6c_SOAF-R15ZepMt0N4eTdFZlU04
+
+Key: PRIVATE_KEY
+Value: l_uWy8qBj22_JqzEAHlj6TvxTYM7xCqR2V7SFa_fmb4
+
+================================================================
+IMPORTANT:
+- Make sure there are NO spaces at the beginning or end.
+- After updating, you MUST redeploy your project for changes to take effect!
+  (Go to Deployments > Click the 3 dots on latest > Redeploy)
+================================================================

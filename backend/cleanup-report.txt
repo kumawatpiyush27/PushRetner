@@ -1,0 +1,23 @@
+🔍 Checking for invalid subscriptions...
+📊 Total subscriptions in database: 12
+✅ Valid subscription 21: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 23: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 27: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 28: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 30: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 33: store=unknown, p256dh=87 chars, auth=22 chars
+❌ Invalid subscription 34: store=Zyra Jewel Production, reason=p256dh too short (10 chars)
+✅ Valid subscription 36: store=unknown, p256dh=87 chars, auth=22 chars
+❌ Invalid subscription 37: store=Zyra Jewel, reason=p256dh too short (4 chars)
+✅ Valid subscription 38: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 35: store=unknown, p256dh=87 chars, auth=22 chars
+✅ Valid subscription 40: store=unknown, p256dh=87 chars, auth=22 chars
+
+📊 Summary:
+   ✅ Valid subscriptions: 10
+   ❌ Invalid subscriptions: 2
+
+🗑️  Deleting 2 invalid subscriptions...
+✅ Deleted 2 invalid subscriptions
+
+📊 Final subscription count: 10
