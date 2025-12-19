@@ -424,37 +424,7 @@ app.get('/store-admin', (req, res) => {
                 <input type="password" id="password" placeholder="Enter your password">
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
-                    <input type="checkbox" id="useMasterPassword" onchange="toggleMasterPassword()">
-                    <span>Use Master Password</span>
-                </label>
-                <a href="#" onclick="showForgotPassword(); return false;" style="color: #667eea; text-decoration: none; font-size: 14px;">Forgot Password?</a>
-            </div>
-            
             <button class="btn btn-primary" onclick="login()">Login</button>
-        </div>
-        
-        <!-- Forgot Password Form -->
-        <div class="login-form" id="forgotPasswordForm">
-            <h1>🔑 Reset Password</h1>
-            <p>Enter your store ID to reset password</p>
-            
-            <div class="alert alert-success" id="resetSuccess"></div>
-            <div class="alert alert-error" id="resetError"></div>
-            
-            <div class="form-group">
-                <label>Store ID</label>
-                <input type="text" id="resetStoreId" placeholder="e.g., zyrajewel">
-            </div>
-            
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="resetEmail" placeholder="admin@yourstore.com">
-            </div>
-            
-            <button class="btn btn-primary" onclick="requestPasswordReset()">Request Reset</button>
-            <button class="btn btn-secondary" onclick="showLogin()">Back to Login</button>
         </div>
         
         <!-- Dashboard -->
@@ -505,85 +475,19 @@ app.get('/store-admin', (req, res) => {
     <script>
         let authToken = localStorage.getItem('storeAuthToken');
         let storeData = JSON.parse(localStorage.getItem('storeData') || '{}');
-        
-        // Master password (change this in production!)
-        const MASTER_PASSWORD = 'admin@2025';
 
         // Check if already logged in
         if (authToken && storeData.id) {
             showDashboard();
             loadStats();
         }
-        
-        function toggleMasterPassword() {
-            const checkbox = document.getElementById('useMasterPassword');
-            const storeIdInput = document.getElementById('storeId');
-            
-            if (checkbox.checked) {
-                storeIdInput.value = 'MASTER';
-                storeIdInput.disabled = true;
-                storeIdInput.style.background = '#f0f0f0';
-            } else {
-                storeIdInput.value = '';
-                storeIdInput.disabled = false;
-                storeIdInput.style.background = 'white';
-            }
-        }
-        
-        function showForgotPassword() {
-            document.getElementById('loginForm').classList.remove('active');
-            document.getElementById('forgotPasswordForm').classList.add('active');
-        }
-        
-        function showLogin() {
-            document.getElementById('forgotPasswordForm').classList.remove('active');
-            document.getElementById('loginForm').classList.add('active');
-        }
-        
-        async function requestPasswordReset() {
-            const storeId = document.getElementById('resetStoreId').value;
-            const email = document.getElementById('resetEmail').value;
-            
-            if (!storeId || !email) {
-                showError('resetError', 'Please enter Store ID and Email');
-                return;
-            }
-            
-            // In production, this would send an email
-            showSuccess('resetSuccess', '✅ Password reset instructions sent to ' + email);
-            
-            setTimeout(() => {
-                showLogin();
-            }, 2000);
-        }
 
         async function login() {
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
-            const useMaster = document.getElementById('useMasterPassword').checked;
 
             if (!storeId || !password) {
                 showError('loginError', 'Please enter Store ID and Password');
-                return;
-            }
-            
-            // Master password bypass
-            if (useMaster && password === MASTER_PASSWORD) {
-                console.log('🔓 Master password used - bypassing authentication');
-                
-                // Create a master admin token
-                authToken = 'MASTER_TOKEN_' + Date.now();
-                storeData = {
-                    id: 'master',
-                    name: 'Master Admin',
-                    domain: 'all-stores'
-                };
-                
-                localStorage.setItem('storeAuthToken', authToken);
-                localStorage.setItem('storeData', JSON.stringify(storeData));
-                
-                showDashboard();
-                loadStats();
                 return;
             }
 
