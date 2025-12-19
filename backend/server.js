@@ -163,6 +163,9 @@ app.post('/store-forgot', async (req, res) => {
 
 // Store Admin Dashboard HTML
 app.get('/store-admin', (req, res) => {
+    // 🔥 FORCE NO CACHE prevent seeing old UI
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
     res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
