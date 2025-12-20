@@ -37,7 +37,8 @@ const initCampaignTable = async () => {
     try { await pool.query(query); console.log('✅ Campaigns table ready'); }
     catch (e) { console.error('❌ Campaign table error:', e); }
 };
-initCampaignTable();
+// initCampaignTable removed from top-level execution to prevent cold start crashes.
+// It will be called lazily inside routes.
 
 // Service Worker - Serve Directly
 app.get('/sw.js', (req, res) => {
@@ -689,6 +690,7 @@ app.get('/my-store/stats', async (req, res) => {
 app.get('/my-store/campaigns', async (req, res) => {
     const { storeId } = req.query;
     try {
+        await initCampaignTable(); // Ensure table exists
         const result = await pool.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 50', [storeId]);
         res.json({ campaigns: result.rows });
     } catch (e) { res.status(500).json({ campaigns: [] }); }
@@ -730,6 +732,7 @@ app.post('/my-store/broadcast', async (req, res) => {
 
         // Save to History
         try {
+            await initCampaignTable(); // Ensure table exists
             await pool.query(
                 `INSERT INTO campaigns (store_id, title, message, url, image, sent_count) VALUES ($1, $2, $3, $4, $5, $6)`,
                 [storeId, title, message, url, image, sent]
