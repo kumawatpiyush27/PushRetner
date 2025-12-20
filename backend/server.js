@@ -20,6 +20,25 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// Init Campaign Table
+const initCampaignTable = async () => {
+    const query = `
+        CREATE TABLE IF NOT EXISTS campaigns (
+            id SERIAL PRIMARY KEY,
+            store_id TEXT,
+            title TEXT,
+            message TEXT,
+            url TEXT,
+            image TEXT,
+            sent_count INTEGER,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    `;
+    try { await pool.query(query); console.log('✅ Campaigns table ready'); }
+    catch (e) { console.error('❌ Campaign table error:', e); }
+};
+initCampaignTable();
+
 // Service Worker - Serve Directly
 app.get('/sw.js', (req, res) => {
     res.set('Service-Worker-Allowed', '/');
@@ -299,6 +318,9 @@ app.get('/store-admin', (req, res) => {
             <div class="menu-item" onclick="switchView('campaign')" id="menu-camp">
                 <i class="fas fa-bullhorn"></i> Campaigns
             </div>
+            <div class="menu-item" onclick="switchView('history')" id="menu-hist">
+                <i class="fas fa-history"></i> History
+            </div>
             <div class="menu-item">
                 <i class="fas fa-users"></i> Subscribers
             </div>
@@ -431,6 +453,27 @@ app.get('/store-admin', (req, res) => {
                 </div>
             </div>
 
+
+            <!-- HISTORY VIEW -->
+            <div id="view-history" class="content-area hidden">
+                <div class="card">
+                    <h3>Campaign History</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f2f3; text-align: left;">
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Date</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Title</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Message</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Sent To</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -462,14 +505,20 @@ app.get('/store-admin', (req, res) => {
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             if(viewName === 'dashboard') document.getElementById('menu-dash').classList.add('active');
             if(viewName === 'campaign') document.getElementById('menu-camp').classList.add('active');
+            if(viewName === 'history') {
+                document.getElementById('menu-hist').classList.add('active');
+                loadHistory();
+            }
 
             // Hide all Views
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-campaign').classList.add('hidden');
+            document.getElementById('view-history').classList.add('hidden');
 
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            document.getElementById('pageTitle').innerText = viewName === 'dashboard' ? 'Dashboard' : 'Create Campaign';
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History'};
+            document.getElementById('pageTitle').innerText = titles[viewName];
         }
 
         // PREVIEW LOGIC
@@ -532,6 +581,28 @@ app.get('/store-admin', (req, res) => {
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+        }
+
+        async function loadHistory() {
+            const res = await fetch('/my-store/campaigns?storeId=' + store.id);
+            const data = await res.json();
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            data.campaigns.forEach(camp => {
+                const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
+                tbody.innerHTML += `
+        < tr style = "border-bottom: 1px solid #eee;" >
+                        <td style="padding: 10px; color: #666; font-size: 13px;">${date}</td>
+                        <td style="padding: 10px; font-weight: 500;">${camp.title}</td>
+                        <td style="padding: 10px; color: #555;">${camp.message.substring(0, 50)}...</td>
+                        <td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">${camp.sent_count}</span></td>
+                    </tr >
+        `;
+            });
+            if(data.campaigns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
+            }
         }
 
         async function sendBroadcast() {
@@ -614,6 +685,15 @@ app.get('/my-store/stats', async (req, res) => {
     } catch (e) { res.status(500).json({ subscribers: 0 }); }
 });
 
+// Campaign History API
+app.get('/my-store/campaigns', async (req, res) => {
+    const { storeId } = req.query;
+    try {
+        const result = await pool.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 50', [storeId]);
+        res.json({ campaigns: result.rows });
+    } catch (e) { res.status(500).json({ campaigns: [] }); }
+});
+
 // Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
     const { storeId, title, message, url, image, actions } = req.body;
@@ -647,6 +727,15 @@ app.post('/my-store/broadcast', async (req, res) => {
                 sent++;
             } catch (e) { console.error('Push failed', e.message); }
         }
+
+        // Save to History
+        try {
+            await pool.query(
+                `INSERT INTO campaigns (store_id, title, message, url, image, sent_count) VALUES ($1, $2, $3, $4, $5, $6)`,
+                [storeId, title, message, url, image, sent]
+            );
+        } catch (dbErr) { console.error('Failed to save campaign history:', dbErr); }
+
         res.json({ success: true, sent });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
