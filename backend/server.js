@@ -49,8 +49,20 @@ const initCampaignTable = async () => {
     try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
     catch (e) { console.error('❌ Campaign table error:', e); }
 };
-// initCampaignTable removed from top-level execution to prevent cold start crashes.
-// It will be called lazily inside routes.
+// Init Stores Table
+const initStoresTable = async () => {
+    const query = `
+        CREATE TABLE IF NOT EXISTS stores (
+            id SERIAL PRIMARY KEY,
+            store_id TEXT UNIQUE,
+            password TEXT,
+            store_name TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    `;
+    try { await getPool().query(query); console.log('✅ Stores table ready'); }
+    catch (e) { console.error('❌ Stores table error:', e); }
+};
 
 // Service Worker - Serve Directly
 app.get('/sw.js', (req, res) => {
@@ -133,9 +145,9 @@ app.post('/subscribe', async (req, res) => {
         } catch (e) { console.error('Welcome push failed:', e.message); }
 
         res.json({ success: true });
-    } catch (error) {
-        console.error('Subscribe Error:', error);
-        res.status(500).json({ error: error.message });
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ success: false, error: 'Server Error: ' + err.message });
     }
 });
 
@@ -159,6 +171,7 @@ app.post('/store-login', async (req, res) => {
 
     try {
         // Check DB
+        await initStoresTable();
         const db = getPool();
         const result = await db.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
         const store = result.rows[0];
@@ -176,10 +189,11 @@ app.post('/store-login', async (req, res) => {
                 }
             });
         }
-        res.status(401).json({ success: false, error: 'Invalid Store ID or Password' });
+        res.status(401).json({ success: false, error: 'Invalid Credentials. If the store is does not exist, please Create an Account.' });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Login Server Error:", err);
+        res.status(500).json({ success: false, error: 'Server Error: ' + (err.message || err.toString()) });
     }
 });
 
@@ -187,6 +201,7 @@ app.post('/store-login', async (req, res) => {
 app.post('/store-register', async (req, res) => {
     const { storeId, password, storeName } = req.body;
     try {
+        await initStoresTable();
         const db = getPool();
         await db.query(
             `INSERT INTO stores (store_id, password, store_name) VALUES ($1, $2, $3)
