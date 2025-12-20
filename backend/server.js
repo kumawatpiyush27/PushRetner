@@ -32,38 +32,24 @@ const getPool = () => {
     return pool;
 };
 
-// Init Tables (Lazy)
-const initAllTables = async () => {
-    const db = getPool();
-    try {
-        // Campaigns Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS campaigns (
-                id SERIAL PRIMARY KEY,
-                store_id TEXT,
-                title TEXT,
-                message TEXT,
-                url TEXT,
-                image TEXT,
-                sent_count INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        // Stores Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS stores (
-                store_id TEXT PRIMARY KEY,
-                password TEXT NOT NULL,
-                store_name TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-        console.log('✅ Tables initialized');
-    } catch (e) {
-        console.error('❌ Table init error:', e);
-    }
+// Init Campaign Table
+const initCampaignTable = async () => {
+    const query = `
+        CREATE TABLE IF NOT EXISTS campaigns (
+            id SERIAL PRIMARY KEY,
+            store_id TEXT,
+            title TEXT,
+            message TEXT,
+            url TEXT,
+            image TEXT,
+            sent_count INTEGER,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    `;
+    try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
+    catch (e) { console.error('❌ Campaign table error:', e); }
 };
+// initCampaignTable removed from top-level execution to prevent cold start crashes.
 // It will be called lazily inside routes.
 
 // Service Worker - Serve Directly
@@ -173,7 +159,6 @@ app.post('/store-login', async (req, res) => {
 
     try {
         // Check DB
-        await initAllTables(); // Ensure schema exists
         const db = getPool();
         const result = await db.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
         const store = result.rows[0];
@@ -202,7 +187,6 @@ app.post('/store-login', async (req, res) => {
 app.post('/store-register', async (req, res) => {
     const { storeId, password, storeName } = req.body;
     try {
-        await initAllTables();
         const db = getPool();
         await db.query(
             `INSERT INTO stores (store_id, password, store_name) VALUES ($1, $2, $3)
@@ -233,9 +217,7 @@ app.post('/store-forgot', async (req, res) => {
 
 // Store Admin Dashboard HTML
 app.get('/store-admin', (req, res) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -317,7 +299,7 @@ app.get('/store-admin', (req, res) => {
                 <label>Password</label>
                 <input type="password" id="password" placeholder="••••••••">
             </div>
-            <button class="new-campaign-btn" id="loginBtn" onclick="login()">Login</button>
+            <button class="new-campaign-btn" onclick="login()">Login</button>
             <div style="text-align: center; margin-top: 16px;">
                 <a href="#" style="color: var(--text-sub); font-size: 13px;" onclick="toggleRegister()">Create an account</a>
             </div>
@@ -355,7 +337,7 @@ app.get('/store-admin', (req, res) => {
             <div class="menu-item" onclick="switchView('history')" id="menu-hist">
                 <i class="fas fa-history"></i> History
             </div>
-            <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
+            <div class="menu-item">
                 <i class="fas fa-users"></i> Subscribers
             </div>
             
@@ -506,26 +488,6 @@ app.get('/store-admin', (req, res) => {
                         </tbody>
                     </table>
                 </div>
-
-            <!-- SUBSCRIBERS VIEW -->
-            <div id="view-subscribers" class="content-area hidden">
-                <div class="card">
-                    <h3>Subscriber List</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #f1f2f3; text-align: left;">
-                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">ID</th>
-                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Joined On</th>
-                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Device/Browser</th>
-                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="subsTableBody">
-                            <!-- Rows loaded via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
             </div>
 
         </div>
@@ -563,20 +525,15 @@ app.get('/store-admin', (req, res) => {
                 document.getElementById('menu-hist').classList.add('active');
                 loadCampaignHistory();
             }
-            if(viewName === 'subscribers') {
-                document.getElementById('menu-subs').classList.add('active');
-                loadSubscribers();
-            }
 
             // Hide all Views
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-campaign').classList.add('hidden');
-            document.getElementById('view-subscribers').classList.add('hidden');
             document.getElementById('view-history').classList.add('hidden');
 
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History'};
             document.getElementById('pageTitle').innerText = titles[viewName];
         }
 
@@ -600,40 +557,21 @@ app.get('/store-admin', (req, res) => {
 
         // API ACTIONS
         async function login() {
-            console.log("Login function called");
-            const btn = document.getElementById('loginBtn');
-            const originalText = btn ? btn.innerText : 'Login';
-            if(btn) {
-                btn.innerText = '⏳ Logging in...';
-                btn.disabled = true;
-            }
-
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
             
-            try {
-                const res = await fetch('/store-login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ storeId, password })
-                });
-                
-                const data = await res.json();
-                
-                if(data.success) {
-                    store = data.store;
-                    localStorage.setItem('store', JSON.stringify(store));
-                    // Force reload to ensure clean state
-                    window.location.reload();
-                } else {
-                    alert('❌ Login Failed: ' + (data.error || 'Unknown Error'));
-                }
-            } catch (err) {
-                console.error(err);
-                alert('⚠️ Network/Server Error: ' + err.message);
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
+            const res = await fetch('/store-login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ storeId, password })
+            });
+            const data = await res.json();
+            if(data.success) {
+                store = data.store;
+                localStorage.setItem('store', JSON.stringify(store));
+                initApp();
+            } else {
+                alert(data.error);
             }
         }
 
@@ -680,36 +618,7 @@ app.get('/store-admin', (req, res) => {
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
             }
-
-        async function loadSubscribers() {
-            const res = await fetch('/my-store/subscribers?storeId=' + store.id);
-            const data = await res.json();
-            const tbody = document.getElementById('subsTableBody');
-            tbody.innerHTML = '';
-
-            data.subscribers.forEach((sub, index) => {
-                const date = new Date(sub.created_at).toLocaleDateString();
-                
-                // Guess Device
-                let device = 'Unknown';
-                if(sub.endpoint.includes('googleapis')) device = '<i class="fab fa-chrome"></i> Android/Chrome';
-                if(sub.endpoint.includes('mozilla')) device = '<i class="fab fa-firefox"></i> Firefox';
-                if(sub.endpoint.includes('microsoft')) device = '<i class="fab fa-edge"></i> Windows/Edge';
-                if(sub.endpoint.includes('apple')) device = '<i class="fab fa-apple"></i> Mac/Safari';
-
-                tbody.innerHTML += \`
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; color: #666; font-size: 13px;">#\${index + 1}</td>
-                        <td style="padding: 10px; font-weight: 500;">\${date}</td>
-                        <td style="padding: 10px; color: #555;">\${device}</td>
-                        <td style="padding: 10px;"><span style="background: #c3f2cb; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight:bold;">ACTIVE</span></td>
-                    </tr>\`;
-            });
-            if(data.subscribers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
-            }
         }
-
 
         async function sendBroadcast() {
             const title = document.getElementById('campTitle').value;
@@ -790,16 +699,6 @@ app.get('/my-store/stats', async (req, res) => {
         const result = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         res.json({ subscribers: result.rows[0].count });
     } catch (e) { res.status(500).json({ subscribers: 0 }); }
-});
-
-app.get('/my-store/subscribers', async (req, res) => {
-    const { storeId } = req.query;
-    try {
-        const db = getPool();
-        // Limit to 100 for performance
-        const result = await db.query('SELECT id, created_at, endpoint FROM subscriptions WHERE store_id = $1 ORDER BY created_at DESC LIMIT 100', [storeId]);
-        res.json({ subscribers: result.rows });
-    } catch (e) { res.status(500).json({ subscribers: [] }); }
 });
 
 // Campaign History API
