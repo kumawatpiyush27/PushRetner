@@ -492,7 +492,18 @@ app.get('/store-admin', (req, res) => {
                         <h3>Recent Campaigns</h3>
                         <a href="javascript:void(0)" onclick="switchView('history')" style="color: var(--primary); text-decoration: none; font-size: 14px;">View All</a>
                      </div>
-                     <p style="color: #666; font-size: 14px;">No recent activity.</p>
+                     <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid #eee;">
+                                <th style="padding: 10px; color: #666; font-size: 13px;">Date</th>
+                                <th style="padding: 10px; color: #666; font-size: 13px;">Title</th>
+                                <th style="padding: 10px; color: #666; font-size: 13px;">Sent To</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentCampaignsBody">
+                            <tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Loading...</td></tr>
+                        </tbody>
+                     </table>
                 </div>
             </div>
 
@@ -820,6 +831,23 @@ app.get('/store-admin', (req, res) => {
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
             });
+
+            // POPULATE RECENT CAMPAIGNS
+            const tbody = document.getElementById('recentCampaignsBody');
+            tbody.innerHTML = '';
+            if(data.recentCampaigns && data.recentCampaigns.length > 0) {
+                data.recentCampaigns.forEach(camp => {
+                    const date = new Date(camp.created_at).toLocaleDateString();
+                    tbody.innerHTML += `
+        < tr style = "border-bottom: 1px solid #f9f9f9;" >
+                            <td style="padding: 12px 10px; font-size: 13px; color: #555;">${date}</td>
+                            <td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">${camp.title}</td>
+                            <td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">${camp.sent_count} Sent</span></td>
+                        </tr > `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
+            }
         }
 
         async function loadCampaignHistory() {
@@ -1005,12 +1033,14 @@ app.get('/my-store/stats', async (req, res) => {
         const db = getPool();
         const subRes = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         const campRes = await db.query('SELECT COUNT(*) FROM campaigns WHERE store_id = $1', [storeId]);
+        const recentRes = await db.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 5', [storeId]);
 
         res.json({
             subscribers: parseInt(subRes.rows[0].count),
-            campaigns: parseInt(campRes.rows[0].count)
+            campaigns: parseInt(campRes.rows[0].count),
+            recentCampaigns: recentRes.rows
         });
-    } catch (e) { res.status(500).json({ subscribers: 0, campaigns: 0 }); }
+    } catch (e) { res.status(500).json({ subscribers: 0, campaigns: 0, recentCampaigns: [] }); }
 });
 
 // Campaign History API
