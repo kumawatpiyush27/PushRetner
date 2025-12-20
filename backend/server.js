@@ -967,9 +967,9 @@ app.get('/store-admin', (req, res) => {
             // UTM Tracking Helper
             const appendUTM = (url) => {
                 if(!url) return url;
-                const sep = url.includes('?') ? '&' : '?';
+                const sep = url.indexOf('?') !== -1 ? '&' : '?';
                 const campaign = encodeURIComponent(title.replace(/\s+/g, '-').toLowerCase());
-                return `${ url }${ sep }utm_source = push - retner & utm_medium=push & utm_campaign=${ campaign }`;
+                return url + sep + 'utm_source=push-retner&utm_medium=push&utm_campaign=' + campaign;
             };
 
             const url = appendUTM(rawUrl);
