@@ -396,6 +396,10 @@ app.get('/store-admin', (req, res) => {
             <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
                 <i class="fas fa-users"></i> Subscribers
             </div>
+            <div class="menu-item" onclick="switchView('automations')" id="menu-auto">
+                <i class="fas fa-robot"></i> Automations
+                <span style="background: var(--primary); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: auto;">PRO</span>
+            </div>
             
             <div style="margin-top: auto;">
                 <div class="menu-item" onclick="logout()">
@@ -504,6 +508,95 @@ app.get('/store-admin', (req, res) => {
                             <tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Loading...</td></tr>
                         </tbody>
                      </table>
+                </div>
+            </div>
+
+            <!-- AUTOMATIONS VIEW -->
+            <div id="view-automations" class="content-area hidden">
+                <div style="margin-bottom: 24px;">
+                    <h2 style="margin: 0;">Automations</h2>
+                    <p style="color: #6d7175; margin: 4px 0 0 0;">Automated push notifications based on user behavior.</p>
+                </div>
+
+                <!-- AUTO STATS -->
+                <div class="stats-grid-4" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 32px;">
+                    <div class="stat-card-premium" style="height: 100px;">
+                        <span class="stat-title">Automation Impressions</span>
+                        <div class="stat-value" style="font-size: 20px;">0</div>
+                    </div>
+                    <div class="stat-card-premium" style="height: 100px;">
+                        <span class="stat-title">Automation Clicks</span>
+                        <div class="stat-value" style="font-size: 20px;">0</div>
+                    </div>
+                    <div class="stat-card-premium" style="height: 100px;">
+                        <span class="stat-title">Automation Revenue</span>
+                        <div class="stat-value" style="font-size: 20px;">₹0.00</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid-2">
+                    <!-- Welcome Notification -->
+                    <div class="wizard-card" style="margin-bottom: 16px; border-left: 4px solid var(--primary);">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <h3 style="margin: 0; font-size: 16px;">Welcome Notification</h3>
+                                    <span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">ACTIVE</span>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Sent immediately after a user subscribes to your store.</p>
+                                <div style="display: flex; gap: 24px;">
+                                    <div><div style="font-size: 11px; color: #999;">Impressions</div><div style="font-weight: 600;">0</div></div>
+                                    <div><div style="font-size: 11px; color: #999;">Clicks</div><div style="font-weight: 600;">0</div></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">Edit</button>
+                        </div>
+                    </div>
+
+                    <!-- Abandoned Cart -->
+                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <h3 style="margin: 0; font-size: 16px;">Abandoned Cart Recovery</h3>
+                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Remind customers of items left in their cart after 1 hour.</p>
+                                <div style="background: #fff4e5; border: 1px solid #ffe8cc; padding: 10px; border-radius: 4px; font-size: 12px; color: #8a6d3b;">
+                                    <i class="fas fa-lock"></i> Available on <b>Business Plan</b>. <a href="#" style="color: #c05621;">Upgrade to unlock</a>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" style="font-size: 12px; padding: 6px 12px; background: #999;" disabled>Activate</button>
+                        </div>
+                    </div>
+
+                    <!-- Price Drop -->
+                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <h3 style="margin: 0; font-size: 16px;">Price Drop Alert</h3>
+                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Notify subscribers when a product they've visited drops in price.</p>
+                            </div>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
+                        </div>
+                    </div>
+
+                    <!-- Back in Stock -->
+                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <h3 style="margin: 0; font-size: 16px;">Back In Stock Recovery</h3>
+                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Automatically notify customers when an out-of-stock item is back.</p>
+                            </div>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -751,13 +844,16 @@ app.get('/store-admin', (req, res) => {
                 document.getElementById('menu-subs').classList.add('active');
                 loadSubscribers();
             }
+            if(viewName === 'automations') {
+                document.getElementById('menu-auto').classList.add('active');
+            }
 
             // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
             
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', automations: 'Automations'};
             document.getElementById('pageTitle').innerText = titles[viewName];
 
             // Reset wizard state if switching to campaign view
