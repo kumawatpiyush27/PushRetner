@@ -838,12 +838,12 @@ app.get('/store-admin', (req, res) => {
             if(data.recentCampaigns && data.recentCampaigns.length > 0) {
                 data.recentCampaigns.forEach(camp => {
                     const date = new Date(camp.created_at).toLocaleDateString();
-                    tbody.innerHTML += `
-        < tr style = "border-bottom: 1px solid #f9f9f9;" >
-                            <td style="padding: 12px 10px; font-size: 13px; color: #555;">${date}</td>
-                            <td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">${camp.title}</td>
-                            <td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">${camp.sent_count} Sent</span></td>
-                        </tr > `;
+                    tbody.innerHTML += \`
+                        <tr style="border-bottom: 1px solid #f9f9f9;">
+                            <td style="padding: 12px 10px; font-size: 13px; color: #555;">\${date}</td>
+                            <td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">\${camp.title}</td>
+                            <td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">\${camp.sent_count} Sent</span></td>
+                        </tr>\`;
                 });
             } else {
                 tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
