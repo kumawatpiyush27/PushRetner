@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
 const path = require('path');
-const SubscriptionModel = require(path.join(__dirname, 'subscriptionModel'));
+const SubscriptionModel = require('./subscriptionModel');
 const cors = require('cors');
 const { Pool } = require('pg');
 
