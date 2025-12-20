@@ -177,7 +177,8 @@ const SubscriptionModel = {
                     storeId: row.store_id,
                     storeName: row.store_name,
                     storeDomain: row.store_domain,
-                    _id: row.id
+                    _id: row.id,
+                    createdAt: row.created_at
                 };
             });
 
