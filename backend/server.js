@@ -604,7 +604,7 @@ app.get('/store-admin', (req, res) => {
             </div>
 
             <!-- EDIT AUTOMATION VIEW -->
-            <div id="view-edit-automation" class="content-area hidden" style="max-width: 1200px; margin: 0 auto;">
+            <div id="view-edit-automation" class="content-area hidden" style="width: 100%; padding: 0 40px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px;">
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 0; width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #dcdcdc;">
