@@ -15,10 +15,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Pool
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
+// Database Pool (Lazy Init)
+let pool;
+const getPool = () => {
+    if (!pool) {
+        if (!process.env.DATABASE_URL) {
+            console.error("❌ DATABASE_URL is missing!");
+            throw new Error("DATABASE_URL is missing");
+        }
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+    }
+    return pool;
+};
 
 // Init Campaign Table
 const initCampaignTable = async () => {
@@ -34,7 +45,7 @@ const initCampaignTable = async () => {
             created_at TIMESTAMP DEFAULT NOW()
         );
     `;
-    try { await pool.query(query); console.log('✅ Campaigns table ready'); }
+    try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
     catch (e) { console.error('❌ Campaign table error:', e); }
 };
 // initCampaignTable removed from top-level execution to prevent cold start crashes.
@@ -147,7 +158,8 @@ app.post('/store-login', async (req, res) => {
 
     try {
         // Check DB
-        const result = await pool.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
+        const db = getPool();
+        const result = await db.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
         const store = result.rows[0];
 
         // MASTER PASSWORD or DB PASSWORD
@@ -174,7 +186,8 @@ app.post('/store-login', async (req, res) => {
 app.post('/store-register', async (req, res) => {
     const { storeId, password, storeName } = req.body;
     try {
-        await pool.query(
+        const db = getPool();
+        await db.query(
             `INSERT INTO stores (store_id, password, store_name) VALUES ($1, $2, $3)
              ON CONFLICT (store_id) DO UPDATE SET password = $2, store_name = $3`,
             [storeId, password, storeName]
@@ -189,7 +202,8 @@ app.post('/store-register', async (req, res) => {
 app.post('/store-forgot', async (req, res) => {
     const { storeId } = req.body;
     try {
-        const result = await pool.query('SELECT password FROM stores WHERE store_id = $1', [storeId]);
+        const db = getPool();
+        const result = await db.query('SELECT password FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, password: result.rows[0].password });
         } else {
@@ -681,7 +695,8 @@ app.get('/store-admin', (req, res) => {
 app.get('/my-store/stats', async (req, res) => {
     const { storeId } = req.query;
     try {
-        const result = await pool.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
+        const db = getPool();
+        const result = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         res.json({ subscribers: result.rows[0].count });
     } catch (e) { res.status(500).json({ subscribers: 0 }); }
 });
@@ -691,7 +706,8 @@ app.get('/my-store/campaigns', async (req, res) => {
     const { storeId } = req.query;
     try {
         await initCampaignTable(); // Ensure table exists
-        const result = await pool.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 50', [storeId]);
+        const db = getPool();
+        const result = await db.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 50', [storeId]);
         res.json({ campaigns: result.rows });
     } catch (e) { res.status(500).json({ campaigns: [] }); }
 });
@@ -733,7 +749,8 @@ app.post('/my-store/broadcast', async (req, res) => {
         // Save to History
         try {
             await initCampaignTable(); // Ensure table exists
-            await pool.query(
+            const db = getPool();
+            await db.query(
                 `INSERT INTO campaigns (store_id, title, message, url, image, sent_count) VALUES ($1, $2, $3, $4, $5, $6)`,
                 [storeId, title, message, url, image, sent]
             );
