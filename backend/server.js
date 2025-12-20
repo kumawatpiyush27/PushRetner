@@ -24,8 +24,9 @@ const pool = new Pool({
 app.get('/sw.js', (req, res) => {
     res.set('Service-Worker-Allowed', '/');
     res.set('Content-Type', 'application/javascript');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); // Force no cache
     res.status(200).send(`
-        console.log('🚀 Service Worker script loaded');
+        console.log('🚀 Service Worker v2 (Image Support) Loaded');
         self.addEventListener('install', function(event) {
             console.log('📦 Service Worker installing...');
             event.waitUntil(self.skipWaiting());
