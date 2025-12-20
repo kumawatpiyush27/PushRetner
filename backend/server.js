@@ -598,21 +598,36 @@ app.get('/store-admin', (req, res) => {
 
         // API ACTIONS
         async function login() {
+            const btn = document.querySelector('button[onclick="login()"]');
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Logging in...';
+            btn.disabled = true;
+
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
             
-            const res = await fetch('/store-login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId, password })
-            });
-            const data = await res.json();
-            if(data.success) {
-                store = data.store;
-                localStorage.setItem('store', JSON.stringify(store));
-                initApp();
-            } else {
-                alert(data.error);
+            try {
+                const res = await fetch('/store-login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ storeId, password })
+                });
+                
+                const data = await res.json();
+                
+                if(data.success) {
+                    store = data.store;
+                    localStorage.setItem('store', JSON.stringify(store));
+                    initApp();
+                } else {
+                    alert('❌ Login Failed: ' + (data.error || 'Unknown Error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('⚠️ Network/Server Error: ' + err.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         }
 
