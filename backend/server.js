@@ -672,7 +672,7 @@ app.get('/store-admin', (req, res) => {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
             }
         }
-        }
+
 
         async function sendBroadcast() {
             const title = document.getElementById('campTitle').value;
