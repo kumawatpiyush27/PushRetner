@@ -32,24 +32,38 @@ const getPool = () => {
     return pool;
 };
 
-// Init Campaign Table
-const initCampaignTable = async () => {
-    const query = `
-        CREATE TABLE IF NOT EXISTS campaigns (
-            id SERIAL PRIMARY KEY,
-            store_id TEXT,
-            title TEXT,
-            message TEXT,
-            url TEXT,
-            image TEXT,
-            sent_count INTEGER,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-    `;
-    try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
-    catch (e) { console.error('❌ Campaign table error:', e); }
+// Init Tables (Lazy)
+const initAllTables = async () => {
+    const db = getPool();
+    try {
+        // Campaigns Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS campaigns (
+                id SERIAL PRIMARY KEY,
+                store_id TEXT,
+                title TEXT,
+                message TEXT,
+                url TEXT,
+                image TEXT,
+                sent_count INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Stores Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS stores (
+                store_id TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                store_name TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+        console.log('✅ Tables initialized');
+    } catch (e) {
+        console.error('❌ Table init error:', e);
+    }
 };
-// initCampaignTable removed from top-level execution to prevent cold start crashes.
 // It will be called lazily inside routes.
 
 // Service Worker - Serve Directly
@@ -159,6 +173,7 @@ app.post('/store-login', async (req, res) => {
 
     try {
         // Check DB
+        await initAllTables(); // Ensure schema exists
         const db = getPool();
         const result = await db.query('SELECT * FROM stores WHERE store_id = $1', [storeId]);
         const store = result.rows[0];
@@ -187,6 +202,7 @@ app.post('/store-login', async (req, res) => {
 app.post('/store-register', async (req, res) => {
     const { storeId, password, storeName } = req.body;
     try {
+        await initAllTables();
         const db = getPool();
         await db.query(
             `INSERT INTO stores (store_id, password, store_name) VALUES ($1, $2, $3)
