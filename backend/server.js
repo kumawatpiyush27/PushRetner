@@ -549,7 +549,7 @@ app.get('/store-admin', (req, res) => {
                                     <div><div style="font-size: 11px; color: #999;">Clicks</div><div style="font-weight: 600;">0</div></div>
                                 </div>
                             </div>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">Edit</button>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="openEditAuto('welcome')">Edit</button>
                         </div>
                     </div>
 
@@ -595,6 +595,80 @@ app.get('/store-admin', (req, res) => {
                                 <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Automatically notify customers when an out-of-stock item is back.</p>
                             </div>
                             <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                </div>
+            </div>
+
+            <!-- EDIT AUTOMATION VIEW -->
+            <div id="view-edit-automation" class="content-area hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #e1e3e5; padding-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 8px 12px; height: 36px; display: flex; align-items: center;">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h2 style="margin: 0; font-size: 18px;" id="editAutoHeader">Edit Automation</h2>
+                            <p style="color: #6d7175; font-size: 13px; margin: 2px 0 0 0;">Configure your automated message behavior.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveAutomation()" style="background: #5c6ac4; min-width: 100px;">Save</button>
+                </div>
+
+                <div class="wizard-layout">
+                    <!-- Form side -->
+                    <div>
+                        <div class="wizard-card">
+                            <h3 style="font-size: 15px; margin-bottom: 16px;">Notification Content</h3>
+                            <div class="form-group">
+                                <label>Title *</label>
+                                <input type="text" id="autoTitle" placeholder="We're glad to have you here! ❤️" oninput="updateAutoPreview()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Message *</label>
+                                <textarea id="autoMsg" rows="3" placeholder="As an exclusive subscriber, you'll get our latest offers..." oninput="updateAutoPreview()"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="wizard-card">
+                            <h3 style="font-size: 15px; margin-bottom: 16px;">Click Behavior</h3>
+                            <div class="form-group">
+                                <label>Click URL</label>
+                                <input type="text" id="autoUrl" placeholder="https://yourstore.com">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Initial Delay</label>
+                                <select id="autoDelay" style="width: 100%; padding: 10px; border: 1px solid #e1e3e5; border-radius: 4px; font-size: 14px; background: white;">
+                                    <option value="0">Immediately</option>
+                                    <option value="5">After 5 minutes</option>
+                                    <option value="60">After 1 hour</option>
+                                    <option value="1440">After 24 hours</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview side -->
+                    <div>
+                         <div class="card" style="position: sticky; top: 20px;">
+                            <h3 style="font-size: 15px; margin-bottom: 16px;"><i class="fas fa-eye" style="margin-right: 8px;"></i>Preview</h3>
+                            <div class="preview-box">
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <div style="width: 40px; height: 40px; background: #eee; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-bell" style="color: #999;"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: bold; font-size: 13px; color: #333;" id="prevAutoTitle">Welcome!</div>
+                                        <div style="font-size: 12px; color: #666; line-height: 1.4;" id="prevAutoMsg">Thanks for subscribing to our store.</div>
+                                    </div>
+                                </div>
+                                <div style="height: 100px; background: #f9f9f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 11px;">
+                                    Standard Notification View
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -853,7 +927,7 @@ app.get('/store-admin', (req, res) => {
             
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', automations: 'Automations'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', automations: 'Automations', 'edit-automation': 'Edit Automation'};
             document.getElementById('pageTitle').innerText = titles[viewName];
 
             // Reset wizard state if switching to campaign view
@@ -1096,6 +1170,47 @@ app.get('/store-admin', (req, res) => {
 
             btn.innerHTML = '🚀 Send Campaign';
             btn.disabled = false;
+        }
+
+        // AUTOMATION EDIT LOGIC
+        let currentEditAuto = '';
+        function openEditAuto(type) {
+            currentEditAuto = type;
+            let title = "", msg = "", url = "", delay = "0";
+            
+            if(type === 'welcome') {
+                document.getElementById('editAutoHeader').innerText = "Edit Welcome Automation";
+                title = "We're glad to have you here! ❤️";
+                msg = "As an exclusive subscriber, you'll get our latest offers and products before anyone else!";
+                url = store ? "https://" + (store.id || "store") + ".myshopify.com" : "";
+            }
+            
+            document.getElementById('autoTitle').value = title;
+            document.getElementById('autoMsg').value = msg;
+            document.getElementById('autoUrl').value = url;
+            document.getElementById('autoDelay').value = delay;
+            
+            updateAutoPreview();
+            switchView('edit-automation');
+        }
+
+        function updateAutoPreview() {
+            document.getElementById('prevAutoTitle').innerText = document.getElementById('autoTitle').value || 'Title';
+            document.getElementById('prevAutoMsg').innerText = document.getElementById('autoMsg').value || 'Message...';
+        }
+
+        function saveAutomation() {
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('✅ Automation sequence saved successfully!');
+                switchView('automations');
+            }, 1000);
         }
 
         async function sendBroadcast() {
