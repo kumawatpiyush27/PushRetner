@@ -337,7 +337,7 @@ app.get('/store-admin', (req, res) => {
             <div class="menu-item" onclick="switchView('history')" id="menu-hist">
                 <i class="fas fa-history"></i> History
             </div>
-            <div class="menu-item">
+            <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
                 <i class="fas fa-users"></i> Subscribers
             </div>
             
@@ -488,6 +488,26 @@ app.get('/store-admin', (req, res) => {
                         </tbody>
                     </table>
                 </div>
+
+            <!-- SUBSCRIBERS VIEW -->
+            <div id="view-subscribers" class="content-area hidden">
+                <div class="card">
+                    <h3>Subscriber List</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f2f3; text-align: left;">
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">ID</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Joined On</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Device/Browser</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subsTableBody">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             </div>
 
         </div>
@@ -525,15 +545,20 @@ app.get('/store-admin', (req, res) => {
                 document.getElementById('menu-hist').classList.add('active');
                 loadCampaignHistory();
             }
+            if(viewName === 'subscribers') {
+                document.getElementById('menu-subs').classList.add('active');
+                loadSubscribers();
+            }
 
             // Hide all Views
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-campaign').classList.add('hidden');
+            document.getElementById('view-subscribers').classList.add('hidden');
             document.getElementById('view-history').classList.add('hidden');
 
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers'};
             document.getElementById('pageTitle').innerText = titles[viewName];
         }
 
@@ -618,6 +643,35 @@ app.get('/store-admin', (req, res) => {
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
             }
+
+        async function loadSubscribers() {
+            const res = await fetch('/my-store/subscribers?storeId=' + store.id);
+            const data = await res.json();
+            const tbody = document.getElementById('subsTableBody');
+            tbody.innerHTML = '';
+
+            data.subscribers.forEach((sub, index) => {
+                const date = new Date(sub.created_at).toLocaleDateString();
+                
+                // Guess Device
+                let device = 'Unknown';
+                if(sub.endpoint.includes('googleapis')) device = '<i class="fab fa-chrome"></i> Android/Chrome';
+                if(sub.endpoint.includes('mozilla')) device = '<i class="fab fa-firefox"></i> Firefox';
+                if(sub.endpoint.includes('microsoft')) device = '<i class="fab fa-edge"></i> Windows/Edge';
+                if(sub.endpoint.includes('apple')) device = '<i class="fab fa-apple"></i> Mac/Safari';
+
+                tbody.innerHTML += `
+        < tr style = "border-bottom: 1px solid #eee;" >
+                        <td style="padding: 10px; color: #666; font-size: 13px;">#${index + 1}</td>
+                        <td style="padding: 10px; font-weight: 500;">${date}</td>
+                        <td style="padding: 10px; color: #555;">${device}</td>
+                        <td style="padding: 10px;"><span style="background: #c3f2cb; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight:bold;">ACTIVE</span></td>
+                    </tr > `;
+            });
+            if(data.subscribers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
+            }
+        }
         }
 
         async function sendBroadcast() {
@@ -699,6 +753,16 @@ app.get('/my-store/stats', async (req, res) => {
         const result = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         res.json({ subscribers: result.rows[0].count });
     } catch (e) { res.status(500).json({ subscribers: 0 }); }
+});
+
+app.get('/my-store/subscribers', async (req, res) => {
+    const { storeId } = req.query;
+    try {
+        const db = getPool();
+        // Limit to 100 for performance
+        const result = await db.query('SELECT id, created_at, endpoint FROM subscriptions WHERE store_id = $1 ORDER BY created_at DESC LIMIT 100', [storeId]);
+        res.json({ subscribers: result.rows });
+    } catch (e) { res.status(500).json({ subscribers: [] }); }
 });
 
 // Campaign History API
