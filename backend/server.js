@@ -627,11 +627,11 @@ app.get('/store-admin', (req, res) => {
                         </div>
 
                          <!-- STEP 4: REVIEW -->
-                        <div id="step-4" class="wizard-step hidden">
+                         <div id="step-4" class="wizard-step hidden">
                             <div class="wizard-card">
                                 <h3>Review Campaign</h3>
                                 <table style="width: 100%; font-size: 14px;">
-                                    <tr><td style="color:#666; padding:8px 0;">Campaign Name:</td><td style="font-weight:500;" id="revTitle">-</td></tr>
+                                    <tr><td style="color:#666; padding:8px 0;">Campaign Name:</td><td style="font-weight:600;" id="revTitle">-</td></tr>
                                     <tr><td style="color:#666; padding:8px 0;">Message:</td><td style="font-weight:500;" id="revMsg">-</td></tr>
                                     <tr><td style="color:#666; padding:8px 0;">Audience:</td><td style="font-weight:500;">All Subscribers</td></tr>
                                     <tr><td style="color:#666; padding:8px 0;">Schedule:</td><td style="font-weight:500;">Immediately</td></tr>
@@ -641,9 +641,11 @@ app.get('/store-admin', (req, res) => {
 
                         <!-- NAVIGATION FOOTER -->
                         <div class="wizard-footer">
-                            <button class="btn btn-secondary" id="btnBack" onclick="changeStep(-1)" disabled>Back</button>
-                            <button class="btn btn-primary" id="btnNext" onclick="changeStep(1)">Continue</button>
-                            <button class="btn btn-primary hidden" id="btnSend" onclick="sendBroadcastFinal()">🚀 Send Campaign</button>
+                            <button class="btn btn-secondary" id="btnBack" onclick="changeStep(-1)" style="min-width: 100px;">Back</button>
+                            <button class="btn btn-primary" id="btnNext" onclick="changeStep(1)" style="min-width: 120px;">Continue</button>
+                            <button class="btn btn-primary hidden" id="btnSend" onclick="sendBroadcastFinal()" style="min-width: 180px; background: #008060; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fas fa-paper-plane"></i> Send Campaign
+                            </button>
                         </div>
 
                     </div>
@@ -747,19 +749,26 @@ app.get('/store-admin', (req, res) => {
             }
             if(viewName === 'subscribers') {
                 document.getElementById('menu-subs').classList.add('active');
-                loadSubscribers();
-            }
-
-            // Hide all Views
-            document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-campaign').classList.add('hidden');
-            document.getElementById('view-history').classList.add('hidden');
-            document.getElementById('view-subscribers').classList.add('hidden');
-
-            // Show Selected
+            document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-nav li').forEach(l => l.classList.remove('active'));
+            
             document.getElementById('view-'+viewName).classList.remove('hidden');
             let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List'};
             document.getElementById('pageTitle').innerText = titles[viewName];
+
+            // Reset wizard state if switching to campaign view
+            if(viewName === 'campaign') {
+                resetWizard();
+            }
+        }
+
+        function resetWizard() {
+            currentStep = 1;
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('hidden'));
+            document.getElementById('step-1').classList.remove('hidden');
+            document.querySelectorAll('.step-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('stepper-1').classList.add('active');
+            updateButtons();
         }
 
         // PREVIEW LOGIC
@@ -864,19 +873,19 @@ app.get('/store-admin', (req, res) => {
             });
 
             // POPULATE RECENT CAMPAIGNS
-            const tbody = document.getElementById('recentCampaignsBody');
-            tbody.innerHTML = '';
+            const tbodyRecent = document.getElementById('recentCampaignsBody');
+            tbodyRecent.innerHTML = '';
             if(data.recentCampaigns && data.recentCampaigns.length > 0) {
                 data.recentCampaigns.forEach(camp => {
                     const date = new Date(camp.created_at).toLocaleDateString();
-                    tbody.innerHTML += '<tr style="border-bottom: 1px solid #f9f9f9;">' +
+                    tbodyRecent.innerHTML += '<tr style="border-bottom: 1px solid #f9f9f9;">' +
                         '<td style="padding: 12px 10px; font-size: 13px; color: #555;">' + date + '</td>' +
                         '<td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">' + camp.title + '</td>' +
                         '<td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">' + camp.sent_count + ' Sent</span></td>' +
                     '</tr>';
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
+                tbodyRecent.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
             }
         }
 
@@ -929,10 +938,9 @@ app.get('/store-admin', (req, res) => {
         }
 
         function changeStep(dir) {
-            const newStep = currentStep + dir;
+            const newStep = parseInt(currentStep) + dir;
             if(newStep < 1 || newStep > 4) return;
 
-            // Validation logic could go here
             if(currentStep === 2 && dir === 1) {
                 if(!document.getElementById('campTitle').value || !document.getElementById('campMsg').value) {
                     alert('Please fill in Title and Message');
@@ -940,7 +948,6 @@ app.get('/store-admin', (req, res) => {
                 }
             }
             if(newStep === 3) {
-                // Fetch Reach
                 fetch('/my-store/stats?storeId=' + store.id)
                     .then(r => r.json())
                     .then(d => { document.getElementById('estReach').innerText = d.subscribers || 0; });
@@ -949,7 +956,6 @@ app.get('/store-admin', (req, res) => {
                 renderReview();
             }
 
-            // Update UI
             document.getElementById('step-' + currentStep).classList.add('hidden');
             document.getElementById('step-' + newStep).classList.remove('hidden');
             
@@ -957,16 +963,22 @@ app.get('/store-admin', (req, res) => {
             document.getElementById('stepper-' + newStep).classList.add('active');
             
             currentStep = newStep;
+            updateButtons();
+        }
 
-            // Buttons
-            document.getElementById('btnBack').disabled = currentStep === 1;
+        function updateButtons() {
+            const backBtn = document.getElementById('btnBack');
+            const nextBtn = document.getElementById('btnNext');
+            const sendBtn = document.getElementById('btnSend');
+
+            backBtn.disabled = (currentStep === 1);
             
             if(currentStep === 4) {
-                document.getElementById('btnNext').classList.add('hidden');
-                document.getElementById('btnSend').classList.remove('hidden');
+                nextBtn.classList.add('hidden');
+                sendBtn.classList.remove('hidden');
             } else {
-                document.getElementById('btnNext').classList.remove('hidden');
-                document.getElementById('btnSend').classList.add('hidden');
+                nextBtn.classList.remove('hidden');
+                sendBtn.classList.add('hidden');
             }
         }
 
