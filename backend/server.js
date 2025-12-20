@@ -37,10 +37,11 @@ app.get('/sw.js', (req, res) => {
         self.addEventListener('push', async function (event) {
             try {
                 const message = await event.data.json();
-                const { title, body, icon, url } = message;
+                const { title, body, icon, url, image } = message;
                 const options = {
                     body: body || 'New Notification',
                     icon: icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    image: image || null,
                     data: { url: url || '/' }
                 };
                 await event.waitUntil(self.registration.showNotification(title, options));
@@ -235,6 +236,7 @@ app.get('/store-admin', (req, res) => {
         <h3>📢 Send Notification</h3>
         <input type="text" id="title" placeholder="Campaign Title">
         <textarea id="message" placeholder="Campaign Message"></textarea>
+        <input type="text" id="image" placeholder="Image URL (Optional) - For Big Hero Image">
         <input type="text" id="url" placeholder="Link URL (Optional)">
         <button onclick="sendBroadcast()">🚀 Send Broadcast</button>
         
@@ -284,6 +286,7 @@ app.get('/store-admin', (req, res) => {
         async function sendBroadcast() {
             const title = document.getElementById('title').value;
             const message = document.getElementById('message').value;
+            const image = document.getElementById('image').value;
             const url = document.getElementById('url').value;
             
             const btn = document.querySelector('button[onclick="sendBroadcast()"]');
@@ -293,7 +296,7 @@ app.get('/store-admin', (req, res) => {
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url })
+                body: JSON.stringify({ storeId: store.id, title, message, url, image })
             });
             const data = await res.json();
             
@@ -378,7 +381,7 @@ app.get('/my-store/stats', async (req, res) => {
 
 // Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
-    const { storeId, title, message, url } = req.body;
+    const { storeId, title, message, url, image } = req.body;
     try {
         const subs = await SubscriptionModel.findByStore(storeId);
 
@@ -395,7 +398,7 @@ app.post('/my-store/broadcast', async (req, res) => {
             try {
                 await webPush.sendNotification(
                     { endpoint: sub.endpoint, keys: sub.keys },
-                    JSON.stringify({ title, body: message, url }),
+                    JSON.stringify({ title, body: message, url, image }),
                     options
                 );
                 sent++;
