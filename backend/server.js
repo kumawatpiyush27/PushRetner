@@ -569,6 +569,12 @@ app.get('/store-admin', (req, res) => {
                                     <label>Hero Image URL</label>
                                     <input type="text" id="campImg" placeholder="https://..." oninput="updatePreview()">
                                 </div>
+
+                                <div class="form-group">
+                                    <label>Notification Icon (Logo)</label>
+                                    <input type="text" id="campIcon" placeholder="https://..." oninput="updatePreview()">
+                                    <p class="stat-label">Rec: 100x100px (1:1 Ratio)</p>
+                                </div>
                                 
                                 <h4 style="margin: 16px 0 12px 0;">Action Buttons (Optional)</h4>
                                 <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
@@ -648,7 +654,10 @@ app.get('/store-admin', (req, res) => {
                             <h3>Preview (Android/Windows)</h3>
                             <div class="preview-box">
                                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                    <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%;"></div>
+                                    <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                        <img id="prevIcon" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                        <i id="prevIconPlaceholder" class="fas fa-bell" style="color: #999;"></i>
+                                    </div>
                                     <div>
                                         <div style="font-weight: bold; font-size: 14px;" id="prevTitle">Campaign Title</div>
                                         <div style="font-size: 12px; color: #666;" id="prevMsg">Message body goes here...</div>
@@ -758,7 +767,8 @@ app.get('/store-admin', (req, res) => {
             const title = document.getElementById('campTitle').value || 'Campaign Title';
             const msg = document.getElementById('campMsg').value || 'Message body...';
             const img = document.getElementById('campImg').value;
-
+            const icon = document.getElementById('campIcon').value;
+            
             document.getElementById('prevTitle').innerText = title;
             document.getElementById('prevMsg').innerText = msg;
             
@@ -768,6 +778,17 @@ app.get('/store-admin', (req, res) => {
                 imgEl.style.display = 'block';
             } else {
                 imgEl.style.display = 'none';
+            }
+
+            const iconEl = document.getElementById('prevIcon');
+            const iconPlaceholder = document.getElementById('prevIconPlaceholder');
+            if(icon) {
+                iconEl.src = icon;
+                iconEl.style.display = 'block';
+                iconPlaceholder.style.display = 'none';
+            } else {
+                iconEl.style.display = 'none';
+                iconPlaceholder.style.display = 'block';
             }
         }
 
@@ -848,12 +869,11 @@ app.get('/store-admin', (req, res) => {
             if(data.recentCampaigns && data.recentCampaigns.length > 0) {
                 data.recentCampaigns.forEach(camp => {
                     const date = new Date(camp.created_at).toLocaleDateString();
-                    tbody.innerHTML += \`
-                        <tr style="border-bottom: 1px solid #f9f9f9;">
-                            <td style="padding: 12px 10px; font-size: 13px; color: #555;">\${date}</td>
-                            <td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">\${camp.title}</td>
-                            <td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">\${camp.sent_count} Sent</span></td>
-                        </tr>\`;
+                    tbody.innerHTML += '<tr style="border-bottom: 1px solid #f9f9f9;">' +
+                        '<td style="padding: 12px 10px; font-size: 13px; color: #555;">' + date + '</td>' +
+                        '<td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">' + camp.title + '</td>' +
+                        '<td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">' + camp.sent_count + ' Sent</span></td>' +
+                    '</tr>';
                 });
             } else {
                 tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
@@ -868,13 +888,12 @@ app.get('/store-admin', (req, res) => {
 
             data.campaigns.forEach(camp => {
                 const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
-                tbody.innerHTML += \`
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; color: #666; font-size: 13px;">\${date}</td>
-                        <td style="padding: 10px; font-weight: 500;">\${camp.title}</td>
-                        <td style="padding: 10px; color: #555;">\${camp.message.substring(0, 50)}...</td>
-                        <td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">\${camp.sent_count}</span></td>
-                    </tr>\`;
+                tbody.innerHTML += '<tr style="border-bottom: 1px solid #eee;">' +
+                    '<td style="padding: 10px; color: #666; font-size: 13px;">' + date + '</td>' +
+                    '<td style="padding: 10px; font-weight: 500;">' + camp.title + '</td>' +
+                    '<td style="padding: 10px; color: #555;">' + camp.message.substring(0, 50) + '...</td>' +
+                    '<td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">' + camp.sent_count + '</span></td>' +
+                '</tr>';
             });
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
@@ -890,12 +909,11 @@ app.get('/store-admin', (req, res) => {
             data.subscribers.forEach((sub, index) => {
                 const date = sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A';
                 const idShort = 'User-' + (index + 1);
-                tbody.innerHTML += \`
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; color: #666;">\${date}</td>
-                        <td style="padding: 10px; font-weight: 500;">\${idShort}</td>
-                        <td style="padding: 10px;"><span style="background: #cbf4c9; color: #007f5f; padding: 2px 8px; border-radius: 10px; font-size: 12px;">Active</span></td>
-                    </tr>\`;
+                tbody.innerHTML += '<tr style="border-bottom: 1px solid #eee;">' +
+                    '<td style="padding: 10px; color: #666;">' + date + '</td>' +
+                    '<td style="padding: 10px; font-weight: 500;">' + idShort + '</td>' +
+                    '<td style="padding: 10px;"><span style="background: #cbf4c9; color: #007f5f; padding: 2px 8px; border-radius: 10px; font-size: 12px;">Active</span></td>' +
+                '</tr>';
             });
              if(data.subscribers.length === 0) {
                  tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
@@ -983,6 +1001,7 @@ app.get('/store-admin', (req, res) => {
             };
 
             const url = appendUTM(rawUrl);
+            const icon = document.getElementById('campIcon').value;
             const btn1Text = document.getElementById('btn1Txt').value;
             const btn1UrlRaw = document.getElementById('btn1Link').value;
             const btn1Url = appendUTM(btn1UrlRaw || rawUrl);
@@ -999,7 +1018,7 @@ app.get('/store-admin', (req, res) => {
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url, image, actions })
+                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions })
             });
             const data = await res.json();
             
@@ -1085,7 +1104,7 @@ app.get('/my-store/subscribers', async (req, res) => {
 
 // Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
-    const { storeId, title, message, url, image, actions } = req.body;
+    const { storeId, title, message, url, image, icon, actions } = req.body;
     try {
         const subs = await SubscriptionModel.findByStore(storeId);
 
@@ -1102,6 +1121,7 @@ app.post('/my-store/broadcast', async (req, res) => {
             body: message,
             url,
             image,
+            icon,
             actions
         });
 
