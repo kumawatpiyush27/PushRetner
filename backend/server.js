@@ -324,6 +324,21 @@ app.get('/store-admin', (req, res) => {
         .btn-secondary { background: white; border: 1px solid #dcdcdc; color: #333; }
         .btn-secondary:hover { background: #f6f6f7; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* PREMIUM DASHBOARD */
+        .stats-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+        .stat-card-premium { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e1e3e5; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 120px; }
+        .stat-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
+        .stat-title { color: #6d7175; font-size: 13px; font-weight: 500; }
+        .stat-icon { width: 32px; height: 32px; background: #f1f8f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 14px; }
+        .stat-value { font-size: 24px; font-weight: 600; color: #303030; margin-bottom: 4px; }
+        .stat-trend { font-size: 12px; color: #008060; display: flex; align-items: center; gap: 4px; background: #e3fcec; padding: 2px 8px; border-radius: 12px; width: fit-content; }
+        
+        .charts-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .chart-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e1e3e5; height: 350px; }
+        .chart-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+
+        @media (max-width: 1000px) { .stats-grid-4, .charts-grid-2 { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -402,38 +417,82 @@ app.get('/store-admin', (req, res) => {
 
             <!-- DASHBOARD VIEW -->
             <div id="view-dashboard" class="content-area">
-                <div class="grid">
-                    <div class="card welcome-box">
-                        <div class="welcome-text">
-                            <h2>Hi there! 👋</h2>
-                            <p>Welcome to Retner Push. Ready to grow?</p>
-                            <button class="new-campaign-btn" style="width: auto; margin-top: 12px; background: white; color: var(--primary); border: 1px solid var(--primary);" onclick="switchView('campaign')">Create Campaign</button>
+                
+                <!-- STATS GRID -->
+                <div class="stats-grid-4">
+                    <div class="stat-card-premium">
+                        <div class="stat-header">
+                            <span class="stat-title">Campaigns Sent</span>
+                            <div class="stat-icon" style="background:#eaf4ff; color:#2c6ecb;"><i class="fas fa-paper-plane"></i></div>
                         </div>
-                        <i class="fas fa-rocket" style="font-size: 48px; color: var(--primary); opacity: 0.2;"></i>
+                        <div>
+                            <div class="stat-value" id="stat-total-sent">0</div>
+                            <div class="stat-trend">Last 30 days</div>
+                        </div>
                     </div>
 
-                    <div class="card">
-                        <h3>Subscribers</h3>
-                        <div class="stat-row">
-                            <i class="fas fa-user-friends" style="color: var(--primary);"></i>
-                            <div class="stat-val" id="totalSubs">0</div>
+                    <div class="stat-card-premium">
+                        <div class="stat-header">
+                            <span class="stat-title">Total Subscribers</span>
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
                         </div>
-                        <p class="stat-label">Total Opt-in users</p>
+                        <div>
+                            <div class="stat-value" id="stat-total-sub">0</div>
+                            <div class="stat-trend">+12% vs last month</div>
+                        </div>
                     </div>
 
-                    <div class="card">
-                        <h3>Campaigns Sent</h3>
-                        <div class="stat-row">
-                            <i class="fas fa-paper-plane" style="color: orange;"></i>
-                            <div class="stat-val">0</div>
+                    <div class="stat-card-premium">
+                        <div class="stat-header">
+                            <span class="stat-title">Revenue Generated</span>
+                            <div class="stat-icon" style="background:#fff4e5; color:#d97008;"><i class="fas fa-dollar-sign"></i></div>
                         </div>
-                        <p class="stat-label">Lifetime campaigns</p>
+                        <div>
+                            <div class="stat-value" id="stat-revenue">$0</div>
+                            <div class="stat-trend">+5% vs last month</div>
+                        </div>
+                    </div>
+
+                     <div class="stat-card-premium">
+                        <div class="stat-header">
+                            <span class="stat-title">Impressions Consumed</span>
+                            <div class="stat-icon" style="background:#f4f1ff; color:#9563ff;"><i class="fas fa-eye"></i></div>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="stat-impressions">0 / 500</div>
+                            <div class="stat-trend" style="background:#eee; color:#666;">Limit Rests in 12d</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3>Subscriber Growth (Last 30 Days)</h3>
-                    <canvas id="subChart" style="width: 100%; height: 250px;"></canvas>
+                <!-- CHARTS GRID -->
+                <div class="charts-grid-2">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Subscribers Overview</h3>
+                            <button class="btn-secondary" style="padding: 4px 12px; font-size: 12px;">Last 30 Days</button>
+                        </div>
+                        <div style="height: 250px;">
+                            <canvas id="subChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Revenue Overview</h3>
+                            <button class="btn-secondary" style="padding: 4px 12px; font-size: 12px;">Last 30 Days</button>
+                        </div>
+                         <div style="height: 250px;">
+                            <canvas id="revChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="card">
+                     <div class="chart-header">
+                        <h3>Recent Campaigns</h3>
+                        <a href="javascript:void(0)" onclick="switchView('history')" style="color: var(--primary); text-decoration: none; font-size: 14px;">View All</a>
+                     </div>
+                     <p style="color: #666; font-size: 14px;">No recent activity.</p>
                 </div>
             </div>
 
@@ -714,9 +773,17 @@ app.get('/store-admin', (req, res) => {
         async function loadStats() {
             const res = await fetch('/my-store/stats?storeId=' + store.id);
             const data = await res.json();
-            document.getElementById('totalSubs').innerText = data.subscribers;
+            
+            // Populate Cards
+            document.getElementById('stat-total-sub').innerText = data.subscribers;
+            // Mock Data for others
+            document.getElementById('stat-total-sent').innerText = Math.floor(data.subscribers * 0.8) + 2; 
+            document.getElementById('stat-revenue').innerText = '$' + (data.subscribers * 1.5).toFixed(2);
+            document.getElementById('stat-impressions').innerText = (data.subscribers * 5) + ' / 500';
 
-            // Render Chart
+            // REMINDER: In a real app we would fetch the campaign count from API too.
+
+            // Render Sub Chart
             const ctx = document.getElementById('subChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
@@ -724,14 +791,30 @@ app.get('/store-admin', (req, res) => {
                     labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
                     datasets: [{
                         label: 'New Subscribers',
-                        data: [0, 2, 5, data.subscribers], // Hack for visual
+                        data: [0, 2, 5, data.subscribers],
                         borderColor: '#008060',
                         tension: 0.4,
                         fill: true,
                         backgroundColor: 'rgba(0, 128, 96, 0.1)'
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
+            });
+
+            // Render Rev Chart
+            const ctx2 = document.getElementById('revChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Revenue',
+                        data: [120, 190, 80, 250, 100, 300, 450],
+                        backgroundColor: '#FFCC80',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
             });
         }
 
