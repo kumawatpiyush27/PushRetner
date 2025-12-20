@@ -523,7 +523,7 @@ app.get('/store-admin', (req, res) => {
             if(viewName === 'campaign') document.getElementById('menu-camp').classList.add('active');
             if(viewName === 'history') {
                 document.getElementById('menu-hist').classList.add('active');
-                loadHistory();
+                loadCampaignHistory();
             }
 
             // Hide all Views
@@ -599,7 +599,7 @@ app.get('/store-admin', (req, res) => {
             });
         }
 
-        async function loadHistory() {
+        async function loadCampaignHistory() {
             const res = await fetch('/my-store/campaigns?storeId=' + store.id);
             const data = await res.json();
             const tbody = document.getElementById('historyTableBody');
@@ -608,7 +608,7 @@ app.get('/store-admin', (req, res) => {
             data.campaigns.forEach(camp => {
                 const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
                 tbody.innerHTML += `
-        <tr style="border-bottom: 1px solid #eee;">
+        < tr style = "border-bottom: 1px solid #eee;" >
                         <td style="padding: 10px; color: #666; font-size: 13px;">${date}</td>
                         <td style="padding: 10px; font-weight: 500;">${camp.title}</td>
                         <td style="padding: 10px; color: #555;">${camp.message.substring(0, 50)}...</td>
