@@ -317,7 +317,7 @@ app.get('/store-admin', (req, res) => {
                 <label>Password</label>
                 <input type="password" id="password" placeholder="••••••••">
             </div>
-            <button class="new-campaign-btn" onclick="login()">Login</button>
+            <button class="new-campaign-btn" id="loginBtn" onclick="login()">Login</button>
             <div style="text-align: center; margin-top: 16px;">
                 <a href="#" style="color: var(--text-sub); font-size: 13px;" onclick="toggleRegister()">Create an account</a>
             </div>
@@ -600,10 +600,13 @@ app.get('/store-admin', (req, res) => {
 
         // API ACTIONS
         async function login() {
-            const btn = document.querySelector('button[onclick="login()"]');
-            const originalText = btn.innerText;
-            btn.innerText = '⏳ Logging in...';
-            btn.disabled = true;
+            console.log("Login function called");
+            const btn = document.getElementById('loginBtn');
+            const originalText = btn ? btn.innerText : 'Login';
+            if(btn) {
+                btn.innerText = '⏳ Logging in...';
+                btn.disabled = true;
+            }
 
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
