@@ -749,9 +749,13 @@ app.get('/store-admin', (req, res) => {
             }
             if(viewName === 'subscribers') {
                 document.getElementById('menu-subs').classList.add('active');
+                loadSubscribers();
+            }
+
+            // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-nav li').forEach(l => l.classList.remove('active'));
             
+            // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
             let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List'};
             document.getElementById('pageTitle').innerText = titles[viewName];
