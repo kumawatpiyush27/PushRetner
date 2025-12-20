@@ -38,21 +38,32 @@ app.get('/sw.js', (req, res) => {
         self.addEventListener('push', async function (event) {
             try {
                 const message = await event.data.json();
-                const { title, body, icon, url, image } = message;
+                const { title, body, icon, url, image, actions } = message;
                 const options = {
                     body: body || 'New Notification',
                     icon: icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
                     image: image || null,
-                    requireInteraction: true, // New: Keeps notification visible
-                    data: { url: url || '/' }
+                    requireInteraction: true,
+                    data: { url: url || '/' },
+                    actions: actions || [] // Add Actions here
                 };
                 await event.waitUntil(self.registration.showNotification(title, options));
             } catch (error) { console.error('Push Error:', error); }
         });
         self.addEventListener('notificationclick', function (event) {
             event.notification.close();
-            if (event.notification.data && event.notification.data.url) {
-                event.waitUntil(clients.openWindow(event.notification.data.url));
+            
+            // Default URL (Clicking body)
+            let openUrl = event.notification.data.url;
+
+            // Button Clicks
+            if (event.action) {
+               // event.action will contain the URL from our payload
+               openUrl = event.action; 
+            }
+
+            if (openUrl) {
+                event.waitUntil(clients.openWindow(openUrl));
             }
         });
     `);
@@ -239,7 +250,18 @@ app.get('/store-admin', (req, res) => {
         <input type="text" id="title" placeholder="Campaign Title">
         <textarea id="message" placeholder="Campaign Message"></textarea>
         <input type="text" id="image" placeholder="Image URL (Rec: 2:1 Ratio, e.g. 1000x500px)">
-        <input type="text" id="url" placeholder="Link URL (Optional)">
+        <input type="text" id="url" placeholder="Primary Link URL">
+        
+        <!-- Action Buttons -->
+        <h4 style="margin-bottom: 5px;">Action Buttons (Optional)</h4>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="btn1Text" placeholder="Button 1 Text (e.g. SHOP)">
+            <input type="text" id="btn1Url" placeholder="Button 1 URL">
+        </div>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="btn2Text" placeholder="Button 2 Text (e.g. SALE)">
+            <input type="text" id="btn2Url" placeholder="Button 2 URL">
+        </div>
         <button onclick="sendBroadcast()">🚀 Send Broadcast</button>
         
         <button onclick="logout()" style="background: #ccc; color: #333; margin-top: 20px;">Logout</button>
@@ -291,6 +313,16 @@ app.get('/store-admin', (req, res) => {
             const image = document.getElementById('image').value;
             const url = document.getElementById('url').value;
             
+            // Buttons
+            const btn1Text = document.getElementById('btn1Text').value;
+            const btn1Url = document.getElementById('btn1Url').value;
+            const btn2Text = document.getElementById('btn2Text').value;
+            const btn2Url = document.getElementById('btn2Url').value;
+
+            const actions = [];
+            if(btn1Text) actions.push({ action: btn1Url || url, title: btn1Text });
+            if(btn2Text) actions.push({ action: btn2Url || url, title: btn2Text });
+
             const btn = document.querySelector('button[onclick="sendBroadcast()"]');
             btn.innerText = 'Sending...';
             btn.disabled = true;
@@ -298,7 +330,7 @@ app.get('/store-admin', (req, res) => {
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url, image })
+                body: JSON.stringify({ storeId: store.id, title, message, url, image, actions })
             });
             const data = await res.json();
             
@@ -383,7 +415,7 @@ app.get('/my-store/stats', async (req, res) => {
 
 // Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
-    const { storeId, title, message, url, image } = req.body;
+    const { storeId, title, message, url, image, actions } = req.body;
     try {
         const subs = await SubscriptionModel.findByStore(storeId);
 
@@ -395,12 +427,20 @@ app.post('/my-store/broadcast', async (req, res) => {
             }
         };
 
+        const payload = JSON.stringify({
+            title,
+            body: message,
+            url,
+            image,
+            actions
+        });
+
         let sent = 0;
         for (const sub of subs) {
             try {
                 await webPush.sendNotification(
                     { endpoint: sub.endpoint, keys: sub.keys },
-                    JSON.stringify({ title, body: message, url, image }),
+                    payload,
                     options
                 );
                 sent++;
