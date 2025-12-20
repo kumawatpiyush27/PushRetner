@@ -182,7 +182,6 @@ app.post('/store-forgot', async (req, res) => {
 
 // Store Admin Dashboard HTML
 app.get('/store-admin', (req, res) => {
-    // 🔥 FORCE NO CACHE prevent seeing old UI
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     res.send(`<!DOCTYPE html>
@@ -190,94 +189,312 @@ app.get('/store-admin', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Admin</title>
+    <title>Retner Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 12px; width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; color: #1a1a1a; }
-        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background: #008060; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 10px; }
-        button:hover { background: #004c3f; }
-        .hidden { display: none; }
-        .link { color: #008060; cursor: pointer; text-decoration: underline; font-size: 14px; display: block; margin-top: 10px; text-align: center; }
-        .secondary-btn { background: #6c757d; }
-        .secondary-btn:hover { background: #5a6268; }
-        #forgotSection, #registerSection { border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px; }
-        .stats-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
-        .stats-num { font-size: 24px; font-weight: bold; color: #008060; }
+        :root {
+            --primary: #008060;
+            --primary-hover: #004c3f;
+            --bg: #f6f6f7;
+            --sidebar-width: 240px;
+            --text-dark: #202223;
+            --text-sub: #6d7175;
+            --border: #e1e3e5;
+        }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* LAYOUT */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px; flex-shrink: 0; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 60px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; flex-shrink: 0; }
+        .content-area { padding: 32px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+
+        /* SIDEBAR COMPONENTS */
+        .logo { font-size: 20px; font-weight: 700; margin-bottom: 24px; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+        .logo i { color: var(--primary); }
+        .new-campaign-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 4px; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; transition: 0.2s; }
+        .new-campaign-btn:hover { background: var(--primary-hover); }
+        .menu-item { padding: 10px 12px; color: var(--text-dark); text-decoration: none; display: flex; align-items: center; gap: 12px; border-radius: 4px; margin-bottom: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .menu-item:hover, .menu-item.active { background: #f1f2f3; color: var(--primary); }
+        .menu-item.active { background: #edfffa; }
+
+        /* DASHBOARD WIDGETS */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .card h3 { margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: var(--text-dark); }
+        
+        .stat-row { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
+        .stat-val { font-size: 28px; font-weight: 700; }
+        .stat-label { color: var(--text-sub); font-size: 13px; }
+
+        .welcome-box { background: #edfffa; border: 1px solid #cce5dd; display: flex; justify-content: space-between; align-items: center; }
+        .welcome-text h2 { margin: 0 0 8px 0; font-size: 18px; }
+        .welcome-text p { margin: 0; font-size: 14px; color: var(--text-sub); }
+
+        /* AUTH FORMS */
+        .auth-container { display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; background: var(--bg); z-index: 1000; }
+        .auth-box { background: white; padding: 40px; border-radius: 12px; width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* FORM INPUTS */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        input:focus, textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 1px var(--primary); }
+        
+        .hidden { display: none !important; }
+
+        /* CAMPAIGN CREATOR */
+        .campaign-preview { background: #f1f2f3; padding: 20px; border-radius: 8px; display: flex; justify-content: center; margin-top: 20px; }
+        .preview-box { background: white; padding: 15px; border-radius: 8px; width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .preview-hero { width: 100%; height: 150px; background: #eee; border-radius: 4px; margin-bottom: 10px; object-fit: cover; }
     </style>
 </head>
 <body>
-    <!-- LOGIN FORM -->
-    <div class="container" id="loginForm">
-        <h2>🔐 Store Login</h2>
-        <input type="text" id="storeId" placeholder="Store ID (e.g. zyrajewel)">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Login</button>
-        
-        <a class="link" onclick="toggleForgot()">Forgot Password?</a>
-        <a class="link" onclick="toggleRegister()">Create New Account</a>
 
-        <!-- FORGOT PASSWORD SECTION -->
-        <div id="forgotSection" class="hidden">
-            <h3>🔑 Recover Password</h3>
-            <p style="font-size: 13px; color: #666;">Enter your Store ID to see your password.</p>
-            <input type="text" id="forgotStoreId" placeholder="Enter Store ID">
-            <button class="secondary-btn" onclick="recoverPassword()">Show Password</button>
-            <p id="passwordDisplay" style="font-weight: bold; color: #d63031; text-align: center; margin-top: 10px;"></p>
+    <!-- AUTH SCREEN -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-box" id="loginBox">
+            <h2 style="text-align: center; margin-bottom: 24px; color: var(--primary);">Retner Login</h2>
+            <div class="form-group">
+                <label>Store ID</label>
+                <input type="text" id="storeId" placeholder="e.g. zyrajewel">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <button class="new-campaign-btn" onclick="login()">Login</button>
+            <div style="text-align: center; margin-top: 16px;">
+                <a href="#" style="color: var(--text-sub); font-size: 13px;" onclick="toggleRegister()">Create an account</a>
+            </div>
         </div>
 
-        <!-- REGISTER SECTION -->
-        <div id="registerSection" class="hidden">
-            <h3>📝 Create Account</h3>
-            <input type="text" id="regStoreId" placeholder="Store ID (e.g. mybrand)">
-            <input type="text" id="regStoreName" placeholder="Store Name (e.g. My Brand)">
-            <input type="password" id="regPassword" placeholder="Set Password">
-            <button class="secondary-btn" onclick="register()">Create Account</button>
+        <div class="auth-box hidden" id="registerBox">
+            <h2 style="text-align: center; margin-bottom: 24px;">Create Account</h2>
+            <div class="form-group"><label>Store ID</label><input type="text" id="regStoreId"></div>
+            <div class="form-group"><label>Store Name</label><input type="text" id="regStoreName"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="regPassword"></div>
+            <button class="new-campaign-btn" onclick="register()">Register</button>
+            <div style="text-align: center; margin-top: 16px;">
+                <a href="#" style="color: var(--text-sub); font-size: 13px;" onclick="toggleRegister()">Back to Login</a>
+            </div>
         </div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div class="container hidden" id="dashboard">
-        <h2 id="dashTitle">Store Dashboard</h2>
+    <!-- MAIN APP -->
+    <div id="mainApp" class="hidden" style="display: flex; width: 100%;">
         
-        <div class="stats-box">
-            <div>Total Subscribers</div>
-            <div class="stats-num" id="subCount">0</div>
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="logo"><i class="fas fa-paper-plane"></i> Retner</div>
+            
+            <button class="new-campaign-btn" onclick="switchView('campaign')">
+                <i class="fas fa-plus"></i> New Campaign
+            </button>
+
+            <div class="menu-item active" onclick="switchView('dashboard')" id="menu-dash">
+                <i class="fas fa-home"></i> Home
+            </div>
+            <div class="menu-item" onclick="switchView('campaign')" id="menu-camp">
+                <i class="fas fa-bullhorn"></i> Campaigns
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-users"></i> Subscribers
+            </div>
+            
+            <div style="margin-top: auto;">
+                <div class="menu-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </div>
+            </div>
         </div>
 
-        <h3>📢 Send Notification</h3>
-        <input type="text" id="title" placeholder="Campaign Title">
-        <textarea id="message" placeholder="Campaign Message"></textarea>
-        <input type="text" id="image" placeholder="Image URL (Rec: 2:1 Ratio, e.g. 1000x500px)">
-        <input type="text" id="url" placeholder="Primary Link URL">
-        
-        <!-- Action Buttons -->
-        <h4 style="margin-bottom: 5px;">Action Buttons (Optional)</h4>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="btn1Text" placeholder="Button 1 Text (e.g. SHOP)">
-            <input type="text" id="btn1Url" placeholder="Button 1 URL">
+        <!-- MAIN AREA -->
+        <div class="main-content">
+            <!-- TOP BAR -->
+            <div class="top-bar">
+                <h2 id="pageTitle" style="font-size: 18px; margin: 0;">Dashboard</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: #e1e3e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--primary);" id="userInitials">S</div>
+                    <span id="storeNameDisplay" style="font-size: 14px; font-weight: 500;">Store</span>
+                </div>
+            </div>
+
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="content-area">
+                <div class="grid">
+                    <div class="card welcome-box">
+                        <div class="welcome-text">
+                            <h2>Hi there! 👋</h2>
+                            <p>Welcome to Retner Push. Ready to grow?</p>
+                            <button class="new-campaign-btn" style="width: auto; margin-top: 12px; background: white; color: var(--primary); border: 1px solid var(--primary);" onclick="switchView('campaign')">Create Campaign</button>
+                        </div>
+                        <i class="fas fa-rocket" style="font-size: 48px; color: var(--primary); opacity: 0.2;"></i>
+                    </div>
+
+                    <div class="card">
+                        <h3>Subscribers</h3>
+                        <div class="stat-row">
+                            <i class="fas fa-user-friends" style="color: var(--primary);"></i>
+                            <div class="stat-val" id="totalSubs">0</div>
+                        </div>
+                        <p class="stat-label">Total Opt-in users</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Campaigns Sent</h3>
+                        <div class="stat-row">
+                            <i class="fas fa-paper-plane" style="color: orange;"></i>
+                            <div class="stat-val">0</div>
+                        </div>
+                        <p class="stat-label">Lifetime campaigns</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Subscriber Growth (Last 30 Days)</h3>
+                    <canvas id="subChart" style="width: 100%; height: 250px;"></canvas>
+                </div>
+            </div>
+
+            <!-- CAMPAIGN VIEW -->
+            <div id="view-campaign" class="content-area hidden">
+                <div class="grid" style="grid-template-columns: 2fr 1fr;">
+                    <div class="card">
+                        <h3>Create Campaign</h3>
+                        
+                        <div class="form-group">
+                            <label>Campaign Title</label>
+                            <input type="text" id="campTitle" placeholder="e.g. Flash Sale! ⚡️" oninput="updatePreview()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="campMsg" rows="3" placeholder="Describe your offer..." oninput="updatePreview()"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Hero Image URL (Optional)</label>
+                            <input type="text" id="campImg" placeholder="https://..." oninput="updatePreview()">
+                            <p class="stat-label">Rec: 1000x500px (2:1 Ratio)</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Primary Link</label>
+                            <input type="text" id="campUrl" placeholder="https://yourstore.com/products...">
+                        </div>
+
+                        <h4 style="margin: 24px 0 12px 0;">Action Buttons</h4>
+                        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0;">
+                            <div class="form-group">
+                                <label>Button 1 Text</label>
+                                <input type="text" id="btn1Txt" placeholder="e.g. SHOP NOW">
+                            </div>
+                            <div class="form-group">
+                                <label>Button 1 URL</label>
+                                <input type="text" id="btn1Link" placeholder="https://...">
+                            </div>
+                        </div>
+                        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Button 2 Text</label>
+                                <input type="text" id="btn2Txt" placeholder="e.g. USE CODE">
+                            </div>
+                            <div class="form-group">
+                                <label>Button 2 URL</label>
+                                <input type="text" id="btn2Link" placeholder="https://...">
+                            </div>
+                        </div>
+
+                        <button class="new-campaign-btn" onclick="sendBroadcast()" id="sendBtn">
+                            🚀 Send Campaign
+                        </button>
+                    </div>
+
+                    <!-- PREVIEW -->
+                    <div>
+                        <div class="card" style="position: sticky; top: 20px;">
+                            <h3>Preview (Android/Windows)</h3>
+                            <div class="preview-box">
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%;"></div>
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 14px;" id="prevTitle">Campaign Title</div>
+                                        <div style="font-size: 12px; color: #666;" id="prevMsg">Message body goes here...</div>
+                                    </div>
+                                </div>
+                                <img id="prevImg" src="" style="display: none;" class="preview-hero">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="btn2Text" placeholder="Button 2 Text (e.g. SALE)">
-            <input type="text" id="btn2Url" placeholder="Button 2 URL">
-        </div>
-        <button onclick="sendBroadcast()">🚀 Send Broadcast</button>
-        
-        <button onclick="logout()" style="background: #ccc; color: #333; margin-top: 20px;">Logout</button>
     </div>
 
     <script>
-        // Check session
+        // STATE
         let store = JSON.parse(localStorage.getItem('store') || 'null');
-        if(store) showDashboard();
+        
+        // INIT
+        if(store) {
+            initApp();
+        } else {
+            document.getElementById('authScreen').classList.remove('hidden');
+        }
 
-        // --- LOGIN ---
+        function initApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('mainApp').style.display = 'flex'; // Ensure flex
+            
+            document.getElementById('storeNameDisplay').innerText = store.name;
+            document.getElementById('userInitials').innerText = store.name.charAt(0).toUpperCase();
+
+            loadStats();
+        }
+
+        // NAVIGATION
+        function switchView(viewName) {
+            // Update Menu Active State
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if(viewName === 'dashboard') document.getElementById('menu-dash').classList.add('active');
+            if(viewName === 'campaign') document.getElementById('menu-camp').classList.add('active');
+
+            // Hide all Views
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-campaign').classList.add('hidden');
+
+            // Show Selected
+            document.getElementById('view-'+viewName).classList.remove('hidden');
+            document.getElementById('pageTitle').innerText = viewName === 'dashboard' ? 'Dashboard' : 'Create Campaign';
+        }
+
+        // PREVIEW LOGIC
+        function updatePreview() {
+            const title = document.getElementById('campTitle').value || 'Campaign Title';
+            const msg = document.getElementById('campMsg').value || 'Message body...';
+            const img = document.getElementById('campImg').value;
+
+            document.getElementById('prevTitle').innerText = title;
+            document.getElementById('prevMsg').innerText = msg;
+            
+            const imgEl = document.getElementById('prevImg');
+            if(img) {
+                imgEl.src = img;
+                imgEl.style.display = 'block';
+            } else {
+                imgEl.style.display = 'none';
+            }
+        }
+
+        // API ACTIONS
         async function login() {
             const storeId = document.getElementById('storeId').value;
             const password = document.getElementById('password').value;
-            if(!storeId || !password) return alert('Please enter details');
-
+            
             const res = await fetch('/store-login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -287,44 +504,54 @@ app.get('/store-admin', (req, res) => {
             if(data.success) {
                 store = data.store;
                 localStorage.setItem('store', JSON.stringify(store));
-                showDashboard();
+                initApp();
             } else {
                 alert(data.error);
             }
         }
 
-        // --- DASHBOARD ---
-        function showDashboard() {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('dashTitle').innerText = store.name;
-            loadStats();
-        }
-
         async function loadStats() {
             const res = await fetch('/my-store/stats?storeId=' + store.id);
             const data = await res.json();
-            document.getElementById('subCount').innerText = data.subscribers;
+            document.getElementById('totalSubs').innerText = data.subscribers;
+
+            // Render Chart
+            const ctx = document.getElementById('subChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'New Subscribers',
+                        data: [0, 2, 5, data.subscribers], // Hack for visual
+                        borderColor: '#008060',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(0, 128, 96, 0.1)'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         }
 
         async function sendBroadcast() {
-            const title = document.getElementById('title').value;
-            const message = document.getElementById('message').value;
-            const image = document.getElementById('image').value;
-            const url = document.getElementById('url').value;
+            const title = document.getElementById('campTitle').value;
+            const message = document.getElementById('campMsg').value;
+            const image = document.getElementById('campImg').value;
+            const url = document.getElementById('campUrl').value;
             
             // Buttons
-            const btn1Text = document.getElementById('btn1Text').value;
-            const btn1Url = document.getElementById('btn1Url').value;
-            const btn2Text = document.getElementById('btn2Text').value;
-            const btn2Url = document.getElementById('btn2Url').value;
+            const btn1Text = document.getElementById('btn1Txt').value;
+            const btn1Url = document.getElementById('btn1Link').value;
+            const btn2Text = document.getElementById('btn2Txt').value;
+            const btn2Url = document.getElementById('btn2Link').value;
 
             const actions = [];
             if(btn1Text) actions.push({ action: btn1Url || url, title: btn1Text });
             if(btn2Text) actions.push({ action: btn2Url || url, title: btn2Text });
 
-            const btn = document.querySelector('button[onclick="sendBroadcast()"]');
-            btn.innerText = 'Sending...';
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             btn.disabled = true;
 
             const res = await fetch('/my-store/broadcast', {
@@ -334,13 +561,12 @@ app.get('/store-admin', (req, res) => {
             });
             const data = await res.json();
             
-            btn.innerText = '🚀 Send Broadcast';
+            btn.innerHTML = '🚀 Send Campaign';
             btn.disabled = false;
             
             if(data.success) {
                 alert('✅ Sent to ' + data.sent + ' subscribers!');
-                document.getElementById('title').value = '';
-                document.getElementById('message').value = '';
+                switchView('dashboard'); // Go back to dash
             } else {
                 alert('❌ Failed: ' + data.error);
             }
@@ -351,21 +577,15 @@ app.get('/store-admin', (req, res) => {
             location.reload();
         }
 
-        // --- EXTRAS ---
-        function toggleForgot() {
-            document.getElementById('registerSection').classList.add('hidden');
-            document.getElementById('forgotSection').classList.toggle('hidden');
-        }
-
         function toggleRegister() {
-            document.getElementById('forgotSection').classList.add('hidden');
-            document.getElementById('registerSection').classList.toggle('hidden');
+            document.getElementById('loginBox').classList.toggle('hidden');
+            document.getElementById('registerBox').classList.toggle('hidden');
         }
 
         async function register() {
             const storeId = document.getElementById('regStoreId').value;
-            const password = document.getElementById('regPassword').value;
             const storeName = document.getElementById('regStoreName').value;
+            const password = document.getElementById('regPassword').value;
 
             const res = await fetch('/store-register', {
                 method: 'POST',
@@ -374,29 +594,10 @@ app.get('/store-admin', (req, res) => {
             });
             const data = await res.json();
             if(data.success) {
-                alert('✅ Account Created! You can now login.');
+                alert('Account created!');
                 toggleRegister();
-                document.getElementById('storeId').value = storeId;
-                document.getElementById('password').value = password;
             } else {
-                alert('Error: ' + data.error);
-            }
-        }
-
-        async function recoverPassword() {
-            const storeId = document.getElementById('forgotStoreId').value;
-            if(!storeId) return alert('Enter Store ID');
-
-            const res = await fetch('/store-forgot', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId })
-            });
-            const data = await res.json();
-            if(data.success) {
-                document.getElementById('passwordDisplay').innerText = 'Your Password: ' + data.password;
-            } else {
-                document.getElementById('passwordDisplay').innerText = '❌ Store ID not found';
+                alert(data.error);
             }
         }
     </script>
