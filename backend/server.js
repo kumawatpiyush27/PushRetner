@@ -959,19 +959,26 @@ app.get('/store-admin', (req, res) => {
         }
 
         async function sendBroadcast() {
-            // Updated to pull values from DOM as before
             const title = document.getElementById('campTitle').value;
             const message = document.getElementById('campMsg').value;
             const image = document.getElementById('campImg').value;
-            const url = document.getElementById('campUrl').value;
+            const rawUrl = document.getElementById('campUrl').value;
             
-            // Buttons
+            // UTM Tracking Helper
+            const appendUTM = (url) => {
+                if(!url) return url;
+                const sep = url.includes('?') ? '&' : '?';
+                const campaign = encodeURIComponent(title.replace(/\s+/g, '-').toLowerCase());
+                return `${ url }${ sep }utm_source = push - retner & utm_medium=push & utm_campaign=${ campaign }`;
+            };
+
+            const url = appendUTM(rawUrl);
             const btn1Text = document.getElementById('btn1Txt').value;
-            const btn1Url = document.getElementById('btn1Link').value;
-            // ... (rest uses existing logic)
+            const btn1UrlRaw = document.getElementById('btn1Link').value;
+            const btn1Url = appendUTM(btn1UrlRaw || rawUrl);
 
             const actions = [];
-            if(btn1Text) actions.push({ action: btn1Url || url, title: btn1Text });
+            if(btn1Text) actions.push({ action: btn1Url, title: btn1Text });
             // ...
 
             // Original fetch call logic
