@@ -1,4 +1,5 @@
-// Push Notification Backend - CLEANED & FIXED
+// Push Notification Backend - CLEANED & FIXED - Vercel Force Update
+
 require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
