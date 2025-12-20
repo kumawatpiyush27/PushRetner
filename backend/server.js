@@ -660,13 +660,13 @@ app.get('/store-admin', (req, res) => {
                 if(sub.endpoint.includes('microsoft')) device = '<i class="fab fa-edge"></i> Windows/Edge';
                 if(sub.endpoint.includes('apple')) device = '<i class="fab fa-apple"></i> Mac/Safari';
 
-                tbody.innerHTML += `
-        < tr style = "border-bottom: 1px solid #eee;" >
-                        <td style="padding: 10px; color: #666; font-size: 13px;">#${index + 1}</td>
-                        <td style="padding: 10px; font-weight: 500;">${date}</td>
-                        <td style="padding: 10px; color: #555;">${device}</td>
+                tbody.innerHTML += \`
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; color: #666; font-size: 13px;">#\${index + 1}</td>
+                        <td style="padding: 10px; font-weight: 500;">\${date}</td>
+                        <td style="padding: 10px; color: #555;">\${device}</td>
                         <td style="padding: 10px;"><span style="background: #c3f2cb; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight:bold;">ACTIVE</span></td>
-                    </tr > `;
+                    </tr>\`;
             });
             if(data.subscribers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
