@@ -604,21 +604,21 @@ app.get('/store-admin', (req, res) => {
             </div>
 
             <!-- EDIT AUTOMATION VIEW -->
-            <div id="view-edit-automation" class="content-area hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #e1e3e5; padding-bottom: 20px;">
+            <div id="view-edit-automation" class="content-area hidden" style="max-width: 1200px; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px;">
                     <div style="display: flex; align-items: center; gap: 16px;">
-                        <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 8px 12px; height: 36px; display: flex; align-items: center;">
-                            <i class="fas fa-arrow-left"></i>
+                        <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 0; width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #dcdcdc;">
+                            <i class="fas fa-arrow-left" style="font-size: 14px; color: #666;"></i>
                         </button>
                         <div>
-                            <h2 style="margin: 0; font-size: 18px;" id="editAutoHeader">Edit Automation</h2>
-                            <p style="color: #6d7175; font-size: 13px; margin: 2px 0 0 0;">Configure your automated message behavior.</p>
+                            <h2 style="margin: 0; font-size: 18px; color: #303030;" id="editAutoHeader">Edit Automation</h2>
+                            <p style="color: #616161; font-size: 13px; margin: 2px 0 0 0;">Configure your automated message behavior.</p>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="saveAutomation()" style="background: #5c6ac4; min-width: 100px;">Save</button>
+                    <button class="btn btn-primary" onclick="saveAutomation()" style="background: #5c6ac4; padding: 10px 24px; font-weight: 500;">Save</button>
                 </div>
 
-                <div class="wizard-layout">
+                <div class="wizard-layout" style="grid-template-columns: 1.5fr 1fr;">
                     <!-- Form side -->
                     <div>
                         <div class="wizard-card">
@@ -925,6 +925,14 @@ app.get('/store-admin', (req, res) => {
             // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
             
+            // Hide/Show Top Bar based on view
+            const topBar = document.querySelector('.top-bar');
+            if(viewName === 'edit-automation') {
+                topBar.classList.add('hidden');
+            } else {
+                topBar.classList.remove('hidden');
+            }
+
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
             let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', automations: 'Automations', 'edit-automation': 'Edit Automation'};
