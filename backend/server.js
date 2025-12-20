@@ -571,7 +571,7 @@ app.get('/store-admin', (req, res) => {
                                 </div>
                                 
                                 <h4 style="margin: 16px 0 12px 0;">Action Buttons (Optional)</h4>
-                                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0;">
+                                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                                     <div class="form-group">
                                         <label>Button 1 Text</label>
                                         <input type="text" id="btn1Txt" placeholder="e.g. SHOP NOW">
@@ -579,6 +579,16 @@ app.get('/store-admin', (req, res) => {
                                     <div class="form-group">
                                         <label>Button 1 URL</label>
                                         <input type="text" id="btn1Link" placeholder="https://...">
+                                    </div>
+                                </div>
+                                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0;">
+                                    <div class="form-group">
+                                        <label>Button 2 Text</label>
+                                        <input type="text" id="btn2Txt" placeholder="e.g. CLAIM OFFER">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Button 2 URL</label>
+                                        <input type="text" id="btn2Link" placeholder="https://...">
                                     </div>
                                 </div>
                             </div>
@@ -977,9 +987,13 @@ app.get('/store-admin', (req, res) => {
             const btn1UrlRaw = document.getElementById('btn1Link').value;
             const btn1Url = appendUTM(btn1UrlRaw || rawUrl);
 
+            const btn2Text = document.getElementById('btn2Txt').value;
+            const btn2UrlRaw = document.getElementById('btn2Link').value;
+            const btn2Url = appendUTM(btn2UrlRaw || rawUrl);
+
             const actions = [];
             if(btn1Text) actions.push({ action: btn1Url, title: btn1Text });
-            // ...
+            if(btn2Text) actions.push({ action: btn2Url, title: btn2Text });
 
             // Original fetch call logic
             const res = await fetch('/my-store/broadcast', {
