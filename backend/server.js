@@ -60,6 +60,11 @@ app.get('/', (req, res) => {
     res.json({ status: 'running', service: 'Push Notification API' });
 });
 
+// Admin Redirect
+app.get('/admin', (req, res) => {
+    res.redirect('/store-admin');
+});
+
 // Subscribe Endpoint
 app.post('/subscribe', async (req, res) => {
     try {
