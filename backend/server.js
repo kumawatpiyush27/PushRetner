@@ -597,15 +597,11 @@ app.get('/store-admin', (req, res) => {
                             <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
                         </div>
                     </div>
-                </div>
-            </div>
-
-                </div>
             </div>
 
             <!-- EDIT AUTOMATION VIEW -->
-            <div id="view-edit-automation" class="content-area hidden" style="width: 100%; padding: 0 40px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px;">
+            <div id="view-edit-automation" class="content-area hidden" style="width: 100%; max-width: none; margin: 0; padding: 0 40px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; width: 100%;">
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 0; width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #dcdcdc;">
                             <i class="fas fa-arrow-left" style="font-size: 14px; color: #666;"></i>
@@ -928,9 +924,9 @@ app.get('/store-admin', (req, res) => {
             // Hide/Show Top Bar based on view
             const topBar = document.querySelector('.top-bar');
             if(viewName === 'edit-automation') {
-                topBar.classList.add('hidden');
+                topBar.style.display = 'none';
             } else {
-                topBar.classList.remove('hidden');
+                topBar.style.display = 'flex';
             }
 
             // Show Selected
