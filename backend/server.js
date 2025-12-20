@@ -233,7 +233,9 @@ app.post('/store-forgot', async (req, res) => {
 
 // Store Admin Dashboard HTML
 app.get('/store-admin', (req, res) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
     res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -618,7 +620,8 @@ app.get('/store-admin', (req, res) => {
                 if(data.success) {
                     store = data.store;
                     localStorage.setItem('store', JSON.stringify(store));
-                    initApp();
+                    // Force reload to ensure clean state
+                    window.location.reload();
                 } else {
                     alert('❌ Login Failed: ' + (data.error || 'Unknown Error'));
                 }
