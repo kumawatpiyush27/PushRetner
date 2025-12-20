@@ -612,8 +612,7 @@ app.get('/store-admin', (req, res) => {
                         <td style="padding: 10px; font-weight: 500;">${camp.title}</td>
                         <td style="padding: 10px; color: #555;">${camp.message.substring(0, 50)}...</td>
                         <td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">${camp.sent_count}</span></td>
-                    </tr >
-        `;
+                    </tr > `;
             });
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
