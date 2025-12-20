@@ -668,12 +668,12 @@ app.get('/store-admin', (req, res) => {
             data.subscribers.forEach((sub, index) => {
                 const date = sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A';
                 const idShort = 'User-' + (index + 1);
-                tbody.innerHTML += `
-        < tr style = "border-bottom: 1px solid #eee;" >
-                        <td style="padding: 10px; color: #666;">${date}</td>
-                        <td style="padding: 10px; font-weight: 500;">${idShort}</td>
+                tbody.innerHTML += \`
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; color: #666;">\${date}</td>
+                        <td style="padding: 10px; font-weight: 500;">\${idShort}</td>
                         <td style="padding: 10px;"><span style="background: #cbf4c9; color: #007f5f; padding: 2px 8px; border-radius: 10px; font-size: 12px;">Active</span></td>
-                    </tr > `;
+                    </tr>\`;
             });
              if(data.subscribers.length === 0) {
                  tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center;">No subscribers yet.</td></tr>';
