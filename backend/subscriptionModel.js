@@ -41,19 +41,10 @@ const initTable = async () => {
         CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
     `;
     try {
-<<<<<<< HEAD
         await pool.query(query);
         console.log('✅ Subscriptions table ready with multi-store support');
     } catch (err) {
         console.error('❌ Error creating/updating table:', err);
-=======
-        await getPool().query(query);
-        console.log('✅ Subscriptions table ready');
-        isInitialized = true;
-    } catch (err) {
-        console.error('❌ Error creating table:', err);
-        throw err;
->>>>>>> ef013ab518ef74075890481da40eb24a2b5a772c
     }
 };
 
