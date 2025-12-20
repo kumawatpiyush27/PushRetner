@@ -43,6 +43,7 @@ app.get('/sw.js', (req, res) => {
                     body: body || 'New Notification',
                     icon: icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
                     image: image || null,
+                    requireInteraction: true, // New: Keeps notification visible
                     data: { url: url || '/' }
                 };
                 await event.waitUntil(self.registration.showNotification(title, options));
@@ -237,7 +238,7 @@ app.get('/store-admin', (req, res) => {
         <h3>📢 Send Notification</h3>
         <input type="text" id="title" placeholder="Campaign Title">
         <textarea id="message" placeholder="Campaign Message"></textarea>
-        <input type="text" id="image" placeholder="Image URL (Optional) - For Big Hero Image">
+        <input type="text" id="image" placeholder="Image URL (Rec: 2:1 Ratio, e.g. 1000x500px)">
         <input type="text" id="url" placeholder="Link URL (Optional)">
         <button onclick="sendBroadcast()">🚀 Send Broadcast</button>
         
