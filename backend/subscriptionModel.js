@@ -41,7 +41,8 @@ const initTable = async () => {
         CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
     `;
     try {
-        await pool.query(query);
+        await getPool().query(query);
+        isInitialized = true;
         console.log('✅ Subscriptions table ready with multi-store support');
     } catch (err) {
         console.error('❌ Error creating/updating table:', err);
@@ -80,13 +81,13 @@ const SubscriptionModel = {
         const endpoint = data.endpoint;
         const expirationTime = data.expirationTime || null;
         const keys = data.keys;
-<<<<<<< HEAD
         const storeId = data.storeId || null;
         const storeName = data.storeName || null;
         const storeDomain = data.storeDomain || null;
 
         try {
-            const res = await pool.query(query, [
+            await initTable();
+            const res = await getPool().query(query, [
                 endpoint,
                 expirationTime,
                 keys,
@@ -97,15 +98,6 @@ const SubscriptionModel = {
             const row = res.rows[0];
 
             console.log('✅ Subscription created for store:', row.store_name || 'unknown');
-=======
-
-        try {
-            await initTable();
-            const res = await getPool().query(query, [endpoint, expirationTime, keys]);
-            const row = res.rows[0];
-
-            console.log('✅ Subscription created, returned keys type:', typeof row.keys);
->>>>>>> ef013ab518ef74075890481da40eb24a2b5a772c
 
             return {
                 endpoint: row.endpoint,
@@ -172,8 +164,9 @@ const SubscriptionModel = {
     findByStore: async (storeId) => {
         console.log(`🔍 Finding subscriptions for store: ${storeId}`);
         try {
+            await initTable(); // Ensure table exists
             const query = 'SELECT * FROM subscriptions WHERE store_id = $1';
-            const res = await pool.query(query, [storeId]);
+            const res = await getPool().query(query, [storeId]);
 
             const formatted = res.rows.map((row) => {
                 const keys = row.keys;
