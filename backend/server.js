@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
 const path = require('path');
+const jwt = require('jsonwebtoken'); // Added for SSO
 const SubscriptionModel = require('./subscriptionModel');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -230,9 +231,45 @@ app.post('/store-forgot', async (req, res) => {
     }
 });
 
-// Store Admin Dashboard HTML
+// Store Admin Dashboard HTML (SSO Enabled)
 app.get('/store-admin', (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+    // SSO Handling: Check for Token from Shopify App
+    if (req.query.sso_token) {
+        try {
+            const secret = process.env.SSO_SECRET || process.env.SHOPIFY_API_SECRET;
+            // Only verify if secret is available
+            if (secret) {
+                const decoded = jwt.verify(req.query.sso_token, secret);
+
+                // Valid Token! Prepare Store Object
+                const shopId = decoded.shop.split('.')[0]; // 'example' from 'example.myshopify.com'
+                const authStore = {
+                    id: shopId,
+                    name: shopId, // Use handle as name initially
+                    domain: decoded.shop
+                };
+
+                console.log(`✅ SSO Login Success for: ${decoded.shop}`);
+
+                // Inject Script to Save Session & Reload Clean
+                return res.send(`
+                     <html><body style="font-family:sans-serif; text-align:center; padding-top:50px;">
+                     <h2>Logging you in...</h2>
+                     <p>Verifying secure session for ${decoded.shop}</p>
+                     <script>
+                         localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
+                         window.location.href = '/store-admin';
+                     </script>
+                     </body></html>
+                 `);
+            }
+        } catch (e) {
+            console.error("❌ SSO Verification Failed:", e.message);
+            // Fallback to normal login screen if token is invalid/expired
+        }
+    }
 
     res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -396,10 +433,6 @@ app.get('/store-admin', (req, res) => {
             <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
                 <i class="fas fa-users"></i> Subscribers
             </div>
-            <div class="menu-item" onclick="switchView('automations')" id="menu-auto">
-                <i class="fas fa-robot"></i> Automations
-                <span style="background: var(--primary); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: auto;">PRO</span>
-            </div>
             
             <div style="margin-top: auto;">
                 <div class="menu-item" onclick="logout()">
@@ -508,165 +541,6 @@ app.get('/store-admin', (req, res) => {
                             <tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">Loading...</td></tr>
                         </tbody>
                      </table>
-                </div>
-            </div>
-
-            <!-- AUTOMATIONS VIEW -->
-            <div id="view-automations" class="content-area hidden">
-                <div style="margin-bottom: 24px;">
-                    <h2 style="margin: 0;">Automations</h2>
-                    <p style="color: #6d7175; margin: 4px 0 0 0;">Automated push notifications based on user behavior.</p>
-                </div>
-
-                <!-- AUTO STATS -->
-                <div class="stats-grid-4" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 32px;">
-                    <div class="stat-card-premium" style="height: 100px;">
-                        <span class="stat-title">Automation Impressions</span>
-                        <div class="stat-value" style="font-size: 20px;">0</div>
-                    </div>
-                    <div class="stat-card-premium" style="height: 100px;">
-                        <span class="stat-title">Automation Clicks</span>
-                        <div class="stat-value" style="font-size: 20px;">0</div>
-                    </div>
-                    <div class="stat-card-premium" style="height: 100px;">
-                        <span class="stat-title">Automation Revenue</span>
-                        <div class="stat-value" style="font-size: 20px;">₹0.00</div>
-                    </div>
-                </div>
-
-                <div class="charts-grid-2">
-                    <!-- Welcome Notification -->
-                    <div class="wizard-card" style="margin-bottom: 16px; border-left: 4px solid var(--primary);">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <h3 style="margin: 0; font-size: 16px;">Welcome Notification</h3>
-                                    <span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">ACTIVE</span>
-                                </div>
-                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Sent immediately after a user subscribes to your store.</p>
-                                <div style="display: flex; gap: 24px;">
-                                    <div><div style="font-size: 11px; color: #999;">Impressions</div><div style="font-weight: 600;">0</div></div>
-                                    <div><div style="font-size: 11px; color: #999;">Clicks</div><div style="font-weight: 600;">0</div></div>
-                                </div>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="openEditAuto('welcome')">Edit</button>
-                        </div>
-                    </div>
-
-                    <!-- Abandoned Cart -->
-                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <h3 style="margin: 0; font-size: 16px;">Abandoned Cart Recovery</h3>
-                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
-                                </div>
-                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Remind customers of items left in their cart after 1 hour.</p>
-                                <div style="background: #fff4e5; border: 1px solid #ffe8cc; padding: 10px; border-radius: 4px; font-size: 12px; color: #8a6d3b;">
-                                    <i class="fas fa-lock"></i> Available on <b>Business Plan</b>. <a href="#" style="color: #c05621;">Upgrade to unlock</a>
-                                </div>
-                            </div>
-                            <button class="btn btn-primary" style="font-size: 12px; padding: 6px 12px; background: #999;" disabled>Activate</button>
-                        </div>
-                    </div>
-
-                    <!-- Price Drop -->
-                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <h3 style="margin: 0; font-size: 16px;">Price Drop Alert</h3>
-                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
-                                </div>
-                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Notify subscribers when a product they've visited drops in price.</p>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
-                        </div>
-                    </div>
-
-                    <!-- Back in Stock -->
-                    <div class="wizard-card" style="margin-bottom: 16px; opacity: 0.8;">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <h3 style="margin: 0; font-size: 16px;">Back In Stock Recovery</h3>
-                                    <span style="background: #f4f6f8; color: #6d7175; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">INACTIVE</span>
-                                </div>
-                                <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Automatically notify customers when an out-of-stock item is back.</p>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; opacity: 0.5;">Upgrade</button>
-                        </div>
-                    </div>
-            </div>
-
-            <!-- EDIT AUTOMATION VIEW -->
-            <div id="view-edit-automation" class="content-area hidden" style="width: 100%; max-width: none; margin: 0; padding: 0 40px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <button class="btn btn-secondary" onclick="switchView('automations')" style="padding: 0; width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #dcdcdc;">
-                            <i class="fas fa-arrow-left" style="font-size: 14px; color: #666;"></i>
-                        </button>
-                        <div>
-                            <h2 style="margin: 0; font-size: 18px; color: #303030;" id="editAutoHeader">Edit Automation</h2>
-                            <p style="color: #616161; font-size: 13px; margin: 2px 0 0 0;">Configure your automated message behavior.</p>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="saveAutomation()" style="background: #5c6ac4; padding: 10px 24px; font-weight: 500;">Save</button>
-                </div>
-
-                <div class="wizard-layout" style="grid-template-columns: 1.5fr 1fr;">
-                    <!-- Form side -->
-                    <div>
-                        <div class="wizard-card">
-                            <h3 style="font-size: 15px; margin-bottom: 16px;">Notification Content</h3>
-                            <div class="form-group">
-                                <label>Title *</label>
-                                <input type="text" id="autoTitle" placeholder="We're glad to have you here! ❤️" oninput="updateAutoPreview()">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Message *</label>
-                                <textarea id="autoMsg" rows="3" placeholder="As an exclusive subscriber, you'll get our latest offers..." oninput="updateAutoPreview()"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="wizard-card">
-                            <h3 style="font-size: 15px; margin-bottom: 16px;">Click Behavior</h3>
-                            <div class="form-group">
-                                <label>Click URL</label>
-                                <input type="text" id="autoUrl" placeholder="https://yourstore.com">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Initial Delay</label>
-                                <select id="autoDelay" style="width: 100%; padding: 10px; border: 1px solid #e1e3e5; border-radius: 4px; font-size: 14px; background: white;">
-                                    <option value="0">Immediately</option>
-                                    <option value="5">After 5 minutes</option>
-                                    <option value="60">After 1 hour</option>
-                                    <option value="1440">After 24 hours</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preview side -->
-                    <div>
-                         <div class="card" style="position: sticky; top: 20px;">
-                            <h3 style="font-size: 15px; margin-bottom: 16px;"><i class="fas fa-eye" style="margin-right: 8px;"></i>Preview</h3>
-                            <div class="preview-box">
-                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                    <div style="width: 40px; height: 40px; background: #eee; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                                        <i class="fas fa-bell" style="color: #999;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: bold; font-size: 13px; color: #333;" id="prevAutoTitle">Welcome!</div>
-                                        <div style="font-size: 12px; color: #666; line-height: 1.4;" id="prevAutoMsg">Thanks for subscribing to our store.</div>
-                                    </div>
-                                </div>
-                                <div style="height: 100px; background: #f9f9f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 11px;">
-                                    Standard Notification View
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -914,24 +788,13 @@ app.get('/store-admin', (req, res) => {
                 document.getElementById('menu-subs').classList.add('active');
                 loadSubscribers();
             }
-            if(viewName === 'automations') {
-                document.getElementById('menu-auto').classList.add('active');
-            }
 
             // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
             
-            // Hide/Show Top Bar based on view
-            const topBar = document.querySelector('.top-bar');
-            if(viewName === 'edit-automation') {
-                topBar.style.display = 'none';
-            } else {
-                topBar.style.display = 'flex';
-            }
-
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', automations: 'Automations', 'edit-automation': 'Edit Automation'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List'};
             document.getElementById('pageTitle').innerText = titles[viewName];
 
             // Reset wizard state if switching to campaign view
@@ -1174,47 +1037,6 @@ app.get('/store-admin', (req, res) => {
 
             btn.innerHTML = '🚀 Send Campaign';
             btn.disabled = false;
-        }
-
-        // AUTOMATION EDIT LOGIC
-        let currentEditAuto = '';
-        function openEditAuto(type) {
-            currentEditAuto = type;
-            let title = "", msg = "", url = "", delay = "0";
-            
-            if(type === 'welcome') {
-                document.getElementById('editAutoHeader').innerText = "Edit Welcome Automation";
-                title = "We're glad to have you here! ❤️";
-                msg = "As an exclusive subscriber, you'll get our latest offers and products before anyone else!";
-                url = store ? "https://" + (store.id || "store") + ".myshopify.com" : "";
-            }
-            
-            document.getElementById('autoTitle').value = title;
-            document.getElementById('autoMsg').value = msg;
-            document.getElementById('autoUrl').value = url;
-            document.getElementById('autoDelay').value = delay;
-            
-            updateAutoPreview();
-            switchView('edit-automation');
-        }
-
-        function updateAutoPreview() {
-            document.getElementById('prevAutoTitle').innerText = document.getElementById('autoTitle').value || 'Title';
-            document.getElementById('prevAutoMsg').innerText = document.getElementById('autoMsg').value || 'Message...';
-        }
-
-        function saveAutomation() {
-            const btn = event.currentTarget;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            btn.disabled = true;
-
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                alert('✅ Automation sequence saved successfully!');
-                switchView('automations');
-            }, 1000);
         }
 
         async function sendBroadcast() {
