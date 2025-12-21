@@ -456,6 +456,9 @@ app.get('/store-admin', async (req, res) => {
             <div class="menu-item" onclick="switchView('settings')" id="menu-set">
                 <i class="fas fa-cog"></i> Settings
             </div>
+            <div class="menu-item" onclick="switchView('automations')" id="menu-auto">
+                <i class="fas fa-magic"></i> Automations
+            </div>
             
             <div style="margin-top: auto;">
                 <div class="menu-item" onclick="logout()">
@@ -790,6 +793,43 @@ app.get('/store-admin', async (req, res) => {
                 </div>
             </div>
 
+            <!-- AUTOMATIONS VIEW -->
+            <div id="view-automations" class="content-area hidden">
+                <div class="card" style="max-width: 800px; margin: 0 auto;">
+                    <h3>Automations</h3>
+                    <div class="automation-card" style="border: 1px solid #eee; padding: 20px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                             <div>
+                                 <h4 style="margin: 0; font-size: 16px;">Welcome Notification</h4>
+                                 <p style="margin: 4px 0 0 0; color: #666; font-size: 13px;">Send a message immediately when someone subscribes.</p>
+                             </div>
+                             <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 24px;">
+                                  <input type="checkbox" id="autoWelcomeEnabled" style="opacity: 0; width: 0; height: 0;">
+                                  <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;"></span>
+                                  <span class="slider-toggle" style="position: absolute; content: ''; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;"></span>
+                             </label>
+                        </div>
+                        <div id="welcomeSettings" style="display: none; border-top: 1px solid #eee; padding-top: 16px; margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" id="autoWelcomeTitle" placeholder="Welcome to our store!">
+                            </div>
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="autoWelcomeMsg" placeholder="Thanks for subscribing." rows="3" style="width: 100%; border: 1px solid #e1e3e5; padding: 10px; border-radius: 4px; font-family: inherit; font-size: 14px;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="new-campaign-btn" onclick="saveAutomations()" style="margin-top: 20px;">Save Automations</button>
+                    <div id="saveAutoMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
+                </div>
+                <style>
+                    input:checked + .slider { background-color: #008060; }
+                    input:focus + .slider { box-shadow: 0 0 1px #008060; }
+                    input:checked + .slider .slider-toggle { transform: translateX(26px); }
+                </style>
+            </div>
+
         </div>
     </div>
 
@@ -833,13 +873,17 @@ app.get('/store-admin', async (req, res) => {
                 document.getElementById('menu-set').classList.add('active');
                 loadSettings();
             }
+            if(viewName === 'automations') {
+                document.getElementById('menu-auto').classList.add('active');
+                loadAutomations();
+            }
 
             // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
             
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', settings: 'Settings'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', settings: 'Settings', automations: 'Automations'};
             document.getElementById('pageTitle').innerText = titles[viewName];
 
             // Reset wizard state if switching to campaign view
@@ -1202,6 +1246,60 @@ app.get('/store-admin', async (req, res) => {
                 alert('Error: ' + data.error);
             }
         }
+        /* Automation Logic */
+        function toggleWelcomeSettings() {
+           const enabled = document.getElementById('autoWelcomeEnabled').checked;
+           document.getElementById('welcomeSettings').style.display = enabled ? 'block' : 'none';
+        }
+
+        async function loadAutomations() {
+            const res = await fetch('/my-store/automations?storeId=' + store.id);
+            const data = await res.json();
+            if(data.success && data.automations) {
+                document.getElementById('autoWelcomeEnabled').checked = data.automations.welcome_enabled;
+                document.getElementById('autoWelcomeTitle').value = data.automations.welcome_title || '';
+                document.getElementById('autoWelcomeMsg').value = data.automations.welcome_body || '';
+                toggleWelcomeSettings();
+            }
+        }
+
+        async function saveAutomations() {
+            const welcomeEnabled = document.getElementById('autoWelcomeEnabled').checked;
+            const welcomeTitle = document.getElementById('autoWelcomeTitle').value;
+            const welcomeBody = document.getElementById('autoWelcomeMsg').value;
+            
+            const btn = document.querySelector('#view-automations button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...';
+            btn.disabled = true;
+            
+            const res = await fetch('/my-store/update-automations', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ storeId: store.id, welcomeEnabled, welcomeTitle, welcomeBody })
+            });
+            const data = await res.json();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            
+             if(data.success) {
+                const msg = document.getElementById('saveAutoMsg');
+                if(msg) {
+                    msg.style.display = 'block';
+                    setTimeout(() => msg.style.display = 'none', 3000);
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+        
+        // Listener
+        setTimeout(() => {
+             const toggle = document.getElementById('autoWelcomeEnabled');
+             if(toggle) toggle.addEventListener('change', toggleWelcomeSettings);
+        }, 1000); // Delay to ensure DOM (Wait, Script is at end, so logic runs. Element exists?)
+        // Elements exist because they are in HTML string.
+        // But SwitchView hides them.
     </script>
 </body>
 </html>`);
@@ -1326,6 +1424,70 @@ app.post('/my-store/update-settings', async (req, res) => {
         await db.query('UPDATE stores SET store_name = $1, logo_url = $2 WHERE store_id = $3', [storeName, logoUrl, storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+/* Automation API */
+app.get('/my-store/automations', async (req, res) => {
+    const { storeId } = req.query;
+    try {
+        const db = getPool();
+        // Ensure columns exist (Migration)
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_enabled BOOLEAN DEFAULT FALSE`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_title TEXT`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_body TEXT`);
+
+        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body FROM stores WHERE store_id = $1', [storeId]);
+        if (result.rows.length > 0) {
+            res.json({ success: true, automations: result.rows[0] });
+        } else {
+            res.json({ success: false });
+        }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/my-store/update-automations', async (req, res) => {
+    const { storeId, welcomeEnabled, welcomeTitle, welcomeBody } = req.body;
+    try {
+        const db = getPool();
+        await db.query('UPDATE stores SET welcome_enabled = $1, welcome_title = $2, welcome_body = $3 WHERE store_id = $4',
+            [welcomeEnabled, welcomeTitle, welcomeBody, storeId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+/* Trigger Welcome Notification (Called by Shopify App) */
+app.post('/api/trigger-welcome', async (req, res) => {
+    const { storeId, subscription } = req.body;
+    try {
+        const db = getPool();
+        const storeRes = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, logo_url FROM stores WHERE store_id = $1', [storeId]);
+
+        if (storeRes.rows.length > 0) {
+            const settings = storeRes.rows[0];
+            if (settings.welcome_enabled) {
+                const payload = JSON.stringify({
+                    title: settings.welcome_title || 'Welcome!',
+                    body: settings.welcome_body || 'Thanks for subscribing.',
+                    icon: settings.logo_url || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                    url: '/'
+                });
+                const options = {
+                    vapidDetails: {
+                        subject: 'mailto:admin@zyrajewel.co.in',
+                        publicKey: process.env.PUBLIC_KEY,
+                        privateKey: process.env.PRIVATE_KEY,
+                    }
+                };
+
+                await webPush.sendNotification(subscription, payload, options);
+                console.log(`Welcome Notification sent to store ${storeId}`);
+            }
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Welcome Trigger Failed", e);
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 module.exports = app;
