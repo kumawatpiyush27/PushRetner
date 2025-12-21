@@ -694,7 +694,6 @@ app.get('/store-admin', async (req, res) => {
                             </div>
                         </div>
 
-                        <!-- STEP 3: AUDIENCE & SCHEDULE -->
                         <div id="step-3" class="wizard-step hidden">
                             <div class="wizard-card">
                                 <h3>Target Audience</h3>
@@ -708,15 +707,27 @@ app.get('/store-admin', async (req, res) => {
                             <div class="wizard-card">
                                 <h3>Schedule</h3>
                                 <div class="selection-grid">
-                                    <div class="selection-card selected">
+                                    <div class="selection-card selected" id="sel-now" onclick="toggleSchedule('now')">
                                         <div class="selection-title">Send Now</div>
                                         <div class="selection-desc">Campaign will be sent immediately.</div>
                                     </div>
-                                    <div class="selection-card" style="opacity: 0.6; cursor: not-allowed;">
+                                    <div class="selection-card" id="sel-later" onclick="toggleSchedule('later')">
                                         <div class="selection-title">Schedule for Later</div>
-                                        <div class="selection-desc">Available in Pro plan.</div>
+                                        <div class="selection-desc">Pick a future date and time.</div>
                                     </div>
                                 </div>
+                                <div id="scheduleTimeWrapper" class="hidden" style="margin-top: 15px;">
+                                    <label>Send Date & Time</label>
+                                    <input type="datetime-local" id="scheduleTime" class="form-control">
+                                </div>
+                            </div>
+
+                             <!-- FLASH SALE ONLY -->
+                             <div class="wizard-card hidden" id="expiryCard" style="border: 1px solid #fcd34d; background: #fffbeb;">
+                                <h3 style="color: #b45309; display: flex; align-items: center; gap: 8px;"><i class="fas fa-bolt"></i> Flash Sale Expiry</h3>
+                                <p style="font-size: 13px; color: #92400e; margin-bottom: 10px;">Set an expiry time for this limited offer (TTL).</p>
+                                <label style="color: #92400e;">Offer Expires At</label>
+                                <input type="datetime-local" id="expiryTime" class="form-control">
                             </div>
                         </div>
 
@@ -1163,6 +1174,17 @@ app.get('/store-admin', async (req, res) => {
             campaignType = type;
         }
 
+        let scheduleMode = 'now';
+        function toggleSchedule(mode) {
+             scheduleMode = mode;
+             document.getElementById('sel-now').classList.remove('selected');
+             document.getElementById('sel-later').classList.remove('selected');
+             document.getElementById('sel-' + mode).classList.add('selected');
+             
+             if(mode === 'later') document.getElementById('scheduleTimeWrapper').classList.remove('hidden');
+             else document.getElementById('scheduleTimeWrapper').classList.add('hidden');
+        }
+
         function changeStep(dir) {
             const newStep = parseInt(currentStep) + dir;
             if(newStep < 1 || newStep > 4) return;
@@ -1188,6 +1210,11 @@ app.get('/store-admin', async (req, res) => {
                 fetch('/my-store/stats?storeId=' + store.id)
                     .then(r => r.json())
                     .then(d => { document.getElementById('estReach').innerText = d.subscribers || 0; });
+                
+                // Show Expiry for Flash
+                 const exCard = document.getElementById('expiryCard');
+                 if(campaignType === 'flash') exCard.classList.remove('hidden');
+                 else exCard.classList.add('hidden');
             }
             if(newStep === 4) {
                 renderReview();
@@ -1259,6 +1286,9 @@ app.get('/store-admin', async (req, res) => {
             const btn2UrlRaw = document.getElementById('btn2Link').value;
             const btn2Url = appendUTM(btn2UrlRaw || rawUrl);
 
+            const scheduledAt = (scheduleMode === 'later') ? document.getElementById('scheduleTime').value : null;
+            const expiryAt = (campaignType === 'flash') ? document.getElementById('expiryTime').value : null;
+
             const actions = [];
             if(btn1Text) actions.push({ action: btn1Url, title: btn1Text });
             if(btn2Text) actions.push({ action: btn2Url, title: btn2Text });
@@ -1267,7 +1297,7 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions, type: campaignType })
+                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions, type: campaignType, scheduledAt, expiryAt })
             });
             const data = await res.json();
             
