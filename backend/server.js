@@ -1143,7 +1143,14 @@ app.get('/store-admin', async (req, res) => {
             try {
                 const res = await fetch('/api/run-scheduler');
                 const data = await res.json();
-                alert('✅ Processed ' + (data.processed || 0) + ' pending campaigns.');
+                if(data.debug) {
+                    alert('✅ Processed: ' + (data.processed || 0) + 
+                          '\nServer Time (UTC): ' + data.debug.serverTime + 
+                          '\nPending Due: ' + data.debug.pendingMatch + 
+                          '\nTotal Scheduled: ' + data.debug.totalScheduled);
+                } else {
+                    alert('✅ Processed ' + (data.processed || 0) + ' pending campaigns.');
+                }
                 loadCampaignHistory();
             } catch(e) { alert('Error: ' + e.message); }
             btn.innerHTML = originalText;
@@ -1857,7 +1864,13 @@ app.get('/api/run-scheduler', async (req, res) => {
             await db.query("UPDATE campaigns SET status = 'sent', sent_count = $1 WHERE id = $2", [sent, camp.id]);
             processed++;
         }
-        res.json({ success: true, processed });
+
+
+        // Debug Info
+        const allScheduled = await db.query("SELECT count(*) FROM campaigns WHERE status = 'scheduled'");
+        const serverTime = new Date().toISOString();
+
+        res.json({ success: true, processed, debug: { serverTime, pendingMatch: pending.rows.length, totalScheduled: allScheduled.rows[0].count } });
 
     } catch (e) {
         console.error("Cron Error", e);
