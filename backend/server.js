@@ -1302,7 +1302,11 @@ app.get('/store-admin', async (req, res) => {
             const data = await res.json();
             
             if(data.success) {
-                alert('✅ Sent to ' + data.sent + ' subscribers!');
+                if(data.status === 'scheduled') {
+                    alert('📅 Campaign Scheduled Successfully!');
+                } else {
+                    alert('✅ Sent to ' + data.sent + ' subscribers!');
+                }
                 switchView('dashboard'); // Go back to dash
                 // Reset Wizard
                 currentStep = 1;
@@ -1538,8 +1542,9 @@ app.get('/my-store/subscribers', async (req, res) => {
 });
 
 // Broadcast API
+// Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
-    const { storeId, title, message, url, image, icon, actions } = req.body;
+    const { storeId, title, message, url, image, icon, actions, type, scheduledAt, expiryAt } = req.body;
     try {
         const db = getPool();
         let finalIcon = icon;
@@ -1554,6 +1559,28 @@ app.post('/my-store/broadcast', async (req, res) => {
             }
         }
 
+        // Migration: Ensure Columns Exist
+        try {
+            await db.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'regular'`);
+            await db.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP`);
+            await db.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS expiry_at TIMESTAMP`);
+            await db.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'sent'`);
+        } catch (err) { console.log('Migration error (ignorable):', err.message); }
+
+        // CHECK IF SCHEDULED (Future)
+        if (scheduledAt) {
+            const scheduleDate = new Date(scheduledAt);
+            if (scheduleDate > new Date()) {
+                // Save as Scheduled (DO NOT SEND)
+                await db.query(
+                    `INSERT INTO campaigns (store_id, title, message, url, image, status, type, scheduled_at, expiry_at, sent_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
+                    [storeId, title, message, url, image, 'scheduled', type || 'regular', scheduledAt, expiryAt]
+                );
+                return res.json({ success: true, sent: 0, status: 'scheduled' });
+            }
+        }
+
+        // SEND IMMEDIATELY
         const subs = await SubscriptionModel.findByStore(storeId);
 
         const options = {
@@ -1570,7 +1597,11 @@ app.post('/my-store/broadcast', async (req, res) => {
             url,
             image,
             icon: finalIcon,
-            actions
+            actions,
+            data: {
+                expiryAt, // Pass expiry to Service Worker if needed
+                type
+            }
         });
 
         let sent = 0;
@@ -1585,17 +1616,16 @@ app.post('/my-store/broadcast', async (req, res) => {
             } catch (e) { console.error('Push failed', e.message); }
         }
 
-        // Save to History
+        // Save to History (Sent)
         try {
             await initCampaignTable(); // Ensure table exists
-            const db = getPool();
             await db.query(
-                `INSERT INTO campaigns (store_id, title, message, url, image, sent_count) VALUES ($1, $2, $3, $4, $5, $6)`,
-                [storeId, title, message, url, image, sent]
+                `INSERT INTO campaigns (store_id, title, message, url, image, status, type, expiry_at, sent_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [storeId, title, message, url, image, 'sent', type || 'regular', expiryAt, sent]
             );
         } catch (dbErr) { console.error('Failed to save campaign history:', dbErr); }
 
-        res.json({ success: true, sent });
+        res.json({ success: true, sent, status: 'sent' });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
