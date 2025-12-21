@@ -484,14 +484,14 @@ app.get('/store-admin', async (req, res) => {
             <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
                 <i class="fas fa-users"></i> Subscribers
             </div>
-            <div class="menu-item" onclick="switchView('settings')" id="menu-set">
-                <i class="fas fa-cog"></i> Settings
-            </div>
             <div class="menu-item" onclick="switchView('automations')" id="menu-auto">
                 <i class="fas fa-magic"></i> Automations
             </div>
             
             <div style="margin-top: auto;">
+                <div class="menu-item" onclick="switchView('settings')" id="menu-set">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
                 <div class="menu-item" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </div>
