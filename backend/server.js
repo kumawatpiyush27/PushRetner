@@ -1406,20 +1406,49 @@ app.get('/store-admin', async (req, res) => {
         }
 
         async function saveAutomations() {
+            const btn = document.querySelector('#welcome-edit-area button');
+            const originalText = btn ? btn.innerText : 'Save Text';
+            if(btn) {
+                btn.innerText = 'Saving...';
+                btn.disabled = true;
+            }
+
             const welcomeTitle = document.getElementById('autoWelcomeTitle').value;
             const welcomeBody = document.getElementById('autoWelcomeMsg').value;
             
-            const res = await fetch('/my-store/update-automations', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    storeId: store.id, 
-                    welcomeEnabled: automationState.welcome, 
-                    welcomeTitle, 
-                    welcomeBody 
-                })
-            });
-            // Silent Save or Toast
+            try {
+                const res = await fetch('/my-store/update-automations', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        storeId: store.id, 
+                        welcomeEnabled: automationState.welcome, 
+                        welcomeTitle, 
+                        welcomeBody 
+                    })
+                });
+                const data = await res.json();
+                
+                if(btn) {
+                    if(data.success) {
+                        btn.innerText = 'Saved!';
+                        setTimeout(() => {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        }, 2000);
+                    } else {
+                        alert('Error: ' + data.error);
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            } catch(e) {
+                if(btn) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+                alert('Connection Error');
+            }
         }
     </script>
 </body>
