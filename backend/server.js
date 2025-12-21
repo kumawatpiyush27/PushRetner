@@ -739,7 +739,7 @@ app.get('/store-admin', async (req, res) => {
                                     <tr><td style="color:#666; padding:8px 0;">Campaign Name:</td><td style="font-weight:600;" id="revTitle">-</td></tr>
                                     <tr><td style="color:#666; padding:8px 0;">Message:</td><td style="font-weight:500;" id="revMsg">-</td></tr>
                                     <tr><td style="color:#666; padding:8px 0;">Audience:</td><td style="font-weight:500;">All Subscribers</td></tr>
-                                    <tr><td style="color:#666; padding:8px 0;">Schedule:</td><td style="font-weight:500;">Immediately</td></tr>
+                                    <tr><td style="color:#666; padding:8px 0;">Schedule:</td><td style="font-weight:500;" id="revSchedule">Immediately</td></tr>
                                 </table>
                             </div>
                         </div>
@@ -1287,6 +1287,14 @@ app.get('/store-admin', async (req, res) => {
         function renderReview() {
             document.getElementById('revTitle').innerText = document.getElementById('campTitle').value;
             document.getElementById('revMsg').innerText = document.getElementById('campMsg').value;
+            
+            const timeVal = document.getElementById('scheduleTime').value;
+            let scheduleText = 'Immediately';
+            if(scheduleMode === 'later' && timeVal) {
+                scheduleText = new Date(timeVal).toLocaleString();
+            }
+            const revSch = document.getElementById('revSchedule');
+            if(revSch) revSch.innerText = scheduleText;
         }
 
         async function sendBroadcastFinal() {
