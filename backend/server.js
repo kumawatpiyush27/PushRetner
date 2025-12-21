@@ -405,6 +405,28 @@ app.get('/store-admin', async (req, res) => {
         input:checked + .slider { background-color: #008060; }
         input:focus + .slider { box-shadow: 0 0 1px #008060; }
         input:checked + .slider:before { transform: translateX(26px); }
+
+        /* AUTOMATION GRID */
+        .automations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+        .auto-card { background: white; border: 1px solid #e1e3e5; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 200px; }
+        .auto-card-header { padding: 20px; display: flex; gap: 16px; align-items: start; }
+        .auto-icon { width: 40px; height: 40px; background: #f1f8f5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #008060; font-size: 18px; flex-shrink: 0; }
+        .auto-card h4 { margin: 0 0 4px 0; font-size: 16px; font-weight: 600; }
+        .auto-desc { margin: 0; font-size: 14px; color: #666; line-height: 1.5; }
+        .auto-stats { padding: 0 20px 20px 20px; display: flex; gap: 24px; }
+        .stat-num { display: block; font-weight: 600; font-size: 18px; }
+        .stat-lbl { font-size: 12px; color: #666; }
+        .auto-card-footer { background: #fafbfb; padding: 16px 20px; border-top: 1px solid #e1e3e5; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 8px 8px; }
+        .badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .badge-active { background: #c4fce1; color: #008060; }
+        .badge-inactive { background: #e4e5e7; color: #666; }
+        .badge-grey { background: #f1f2f3; color: #666; border: 1px solid #ddd; }
+        .btn-action { background: white; border: 1px solid #dcdcdc; padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .btn-action:hover { background: #f6f6f7; border-color: #ccc; }
+        .btn-link { background: none; border: none; color: #008060; text-decoration: underline; cursor: pointer; font-size: 13px; }
+        .input-sm { width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .btn-sm { font-size: 12px; padding: 4px 8px; }
+
     </style>
 </head>
 <body>
@@ -804,32 +826,99 @@ app.get('/store-admin', async (req, res) => {
 
             <!-- AUTOMATIONS VIEW -->
             <div id="view-automations" class="content-area hidden">
-                <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <div style="margin: 0 auto; max-width: 1200px;">
                     <h3>Automations</h3>
-                    <div class="automation-card" style="border: 1px solid #eee; padding: 20px; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                             <div>
-                                 <h4 style="margin: 0; font-size: 16px;">Welcome Notification</h4>
-                                 <p style="margin: 4px 0 0 0; color: #666; font-size: 13px;">Send a message immediately when someone subscribes.</p>
-                             </div>
-                             <label class="switch">
-                                  <input type="checkbox" id="autoWelcomeEnabled" onchange="toggleWelcomeSettings()">
-                                  <span class="slider round"></span>
-                             </label>
-                        </div>
-                        <div id="welcomeSettings" style="display: none; border-top: 1px solid #eee; padding-top: 16px; margin-top: 10px;">
-                            <div class="form-group">
-                                <label>Title</label>
-                                <input type="text" id="autoWelcomeTitle" placeholder="Welcome to our store!">
+                    
+                    <div class="automations-grid">
+                        <!-- WELCOME CARD -->
+                        <div class="auto-card" id="card-welcome">
+                            <div class="auto-card-header">
+                                <div class="auto-icon"><i class="fas fa-hand-spock"></i></div>
+                                <div style="flex: 1;">
+                                     <div style="display: flex; gap: 8px; align-items: center;">
+                                        <h4>Welcome notifications</h4>
+                                        <span class="badge badge-inactive" id="badge-welcome">Inactive</span>
+                                     </div>
+                                     <p class="auto-desc">A sequence of notifications sent to the subscriber once they subscribe to your store notifications.</p>
+                                     <!-- Edit Area -->
+                                     <div id="welcome-edit-area" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                                          <input type="text" id="autoWelcomeTitle" class="input-sm" placeholder="Title">
+                                          <textarea id="autoWelcomeMsg" class="input-sm" placeholder="Message" rows="3"></textarea>
+                                          <button class="btn btn-primary btn-sm" onclick="saveAutomations()">Save Text</button>
+                                     </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Message</label>
-                                <textarea id="autoWelcomeMsg" placeholder="Thanks for subscribing." rows="3" style="width: 100%; border: 1px solid #e1e3e5; padding: 10px; border-radius: 4px; font-family: inherit; font-size: 14px;"></textarea>
+                            <div class="auto-stats">
+                                <div><span class="stat-num">0</span><span class="stat-lbl">Impressions</span></div>
+                                <div><span class="stat-num">0</span><span class="stat-lbl">Clicks</span></div>
+                            </div>
+                            
+                            <div class="auto-card-footer">
+                                <div id="welcome-status-text" style="font-size: 13px; color: #666;">Welcome notifications are deactivated.</div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                     <button class="btn-link hidden" id="btn-edit-welcome" onclick="toggleEditWelcome()">Edit</button>
+                                     <button class="btn-action" id="btn-toggle-welcome" onclick="toggleWelcome()">Activate</button>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- ABANDONED CART CARD -->
+                        <div class="auto-card" style="opacity: 0.8;">
+                             <div class="auto-card-header">
+                                <div class="auto-icon"><i class="fas fa-shopping-cart"></i></div>
+                                <div>
+                                     <div style="display: flex; gap: 8px; align-items: center;">
+                                        <h4>Abandoned cart recovery</h4>
+                                        <span class="badge badge-grey">Plus</span>
+                                     </div>
+                                     <p class="auto-desc">Remind subscribers about items they left in their cart.</p>
+                                </div>
+                            </div>
+                            <div class="auto-stats">
+                                <div><span class="stat-num">-</span><span class="stat-lbl">Impressions</span></div>
+                                <div><span class="stat-num">-</span><span class="stat-lbl">Clicks</span></div>
+                            </div>
+                            <div class="auto-card-footer">
+                                <div style="font-size: 13px; color: #666;">Upgrade to unlock this feature</div>
+                                <button class="btn-action" disabled>Unlock</button>
+                            </div>
+                        </div>
+
+                        <!-- SHIPPING CARD -->
+                        <div class="auto-card" style="opacity: 0.7;">
+                             <div class="auto-card-header">
+                                <div class="auto-icon"><i class="fas fa-truck"></i></div>
+                                <div>
+                                     <div style="display: flex; gap: 8px; align-items: center;">
+                                        <h4>Shipping notifications</h4>
+                                        <span class="badge badge-inactive">Inactive</span>
+                                     </div>
+                                     <p class="auto-desc">Send updates when shipping status changes.</p>
+                                </div>
+                            </div>
+                             <div class="auto-card-footer">
+                                <div style="font-size: 13px; color: #666;">Coming Soon</div>
+                            </div>
+                        </div>
+                        
+                        <!-- PRICE DROP CARD -->
+                        <div class="auto-card" style="opacity: 0.7;">
+                             <div class="auto-card-header">
+                                <div class="auto-icon"><i class="fas fa-tag"></i></div>
+                                <div>
+                                     <div style="display: flex; gap: 8px; align-items: center;">
+                                        <h4>Price drop</h4>
+                                        <span class="badge badge-inactive">Inactive</span>
+                                     </div>
+                                     <p class="auto-desc">A notification sent whenever the price of a product is dropped.</p>
+                                </div>
+                            </div>
+                             <div class="auto-card-footer">
+                                <div style="font-size: 13px; color: #666;">Coming Soon</div>
+                            </div>
+                        </div>
+
                     </div>
-                    <button class="new-campaign-btn" onclick="saveAutomations()" style="margin-top: 20px;">Save Automations</button>
-                    <div id="saveAutoMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
                 </div>
 
             </div>
@@ -1250,60 +1339,77 @@ app.get('/store-admin', async (req, res) => {
                 alert('Error: ' + data.error);
             }
         }
-        /* Automation Logic */
-        function toggleWelcomeSettings() {
-           const enabled = document.getElementById('autoWelcomeEnabled').checked;
-           document.getElementById('welcomeSettings').style.display = enabled ? 'block' : 'none';
+        /* Automation Logic Updated */
+        let automationState = { welcome: false };
+
+        function toggleEditWelcome() {
+             document.getElementById('welcome-edit-area').classList.toggle('hidden');
+        }
+
+        function toggleWelcome() {
+            // Flip State
+            automationState.welcome = !automationState.welcome;
+            updateWelcomeCardUI();
+            saveAutomations();
+        }
+
+        function updateWelcomeCardUI() {
+            const enabled = automationState.welcome;
+            // Badge
+            const badge = document.getElementById('badge-welcome');
+            if(badge) {
+                badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
+                badge.innerText = enabled ? 'Active' : 'Inactive';
+            }
+            
+            // Footer Text
+            const txt = document.getElementById('welcome-status-text');
+            if(txt) txt.innerText = enabled ? 'Welcome notifications are activated.' : 'Welcome notifications are deactivated.';
+            
+            // Toggle Button
+            const btn = document.getElementById('btn-toggle-welcome');
+            if(btn) btn.innerText = enabled ? 'Deactivate' : 'Activate';
+            
+            // Edit Button Visibility
+            const editBtn = document.getElementById('btn-edit-welcome');
+            if(editBtn) {
+                if(enabled) editBtn.classList.remove('hidden'); else editBtn.classList.add('hidden');
+            }
+            
+            // Hide edit area if disabled
+            if(!enabled) {
+                const area = document.getElementById('welcome-edit-area');
+                if(area) area.classList.add('hidden');
+            }
         }
 
         async function loadAutomations() {
             const res = await fetch('/my-store/automations?storeId=' + store.id);
             const data = await res.json();
             if(data.success && data.automations) {
-                document.getElementById('autoWelcomeEnabled').checked = data.automations.welcome_enabled;
+                automationState.welcome = data.automations.welcome_enabled;
                 document.getElementById('autoWelcomeTitle').value = data.automations.welcome_title || '';
                 document.getElementById('autoWelcomeMsg').value = data.automations.welcome_body || '';
-                toggleWelcomeSettings();
+                updateWelcomeCardUI();
             }
         }
 
         async function saveAutomations() {
-            const welcomeEnabled = document.getElementById('autoWelcomeEnabled').checked;
             const welcomeTitle = document.getElementById('autoWelcomeTitle').value;
             const welcomeBody = document.getElementById('autoWelcomeMsg').value;
-            
-            const btn = document.querySelector('#view-automations button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = 'Saving...';
-            btn.disabled = true;
             
             const res = await fetch('/my-store/update-automations', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, welcomeEnabled, welcomeTitle, welcomeBody })
+                body: JSON.stringify({ 
+                    storeId: store.id, 
+                    welcomeEnabled: automationState.welcome, 
+                    welcomeTitle, 
+                    welcomeBody 
+                })
             });
-            const data = await res.json();
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            
-             if(data.success) {
-                const msg = document.getElementById('saveAutoMsg');
-                if(msg) {
-                    msg.style.display = 'block';
-                    setTimeout(() => msg.style.display = 'none', 3000);
-                }
-            } else {
-                alert('Error: ' + data.error);
-            }
+            // Silent Save or Toast
         }
-        
-        // Listener
-        setTimeout(() => {
-             const toggle = document.getElementById('autoWelcomeEnabled');
-             if(toggle) toggle.addEventListener('change', toggleWelcomeSettings);
-        }, 1000); // Delay to ensure DOM (Wait, Script is at end, so logic runs. Element exists?)
-        // Elements exist because they are in HTML string.
-        // But SwitchView hides them.
     </script>
 </body>
 </html>`);
