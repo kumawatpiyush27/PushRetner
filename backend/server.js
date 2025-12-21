@@ -781,7 +781,12 @@ app.get('/store-admin', async (req, res) => {
             <!-- HISTORY VIEW -->
             <div id="view-history" class="content-area hidden">
                 <div class="card">
-                    <h3>Campaign History</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <h3 style="margin:0;">Campaign History</h3>
+                        <button class="btn-secondary" onclick="triggerScheduler()" style="padding: 6px 12px; font-size: 13px; cursor: pointer;">
+                            <i class="fas fa-sync"></i> Process Pending
+                        </button>
+                    </div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f1f2f3; text-align: left;">
@@ -1128,6 +1133,21 @@ app.get('/store-admin', async (req, res) => {
             } else {
                 tbodyRecent.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">No recent campaigns found.</td></tr>';
             }
+        }
+
+        async function triggerScheduler() {
+            const btn = document.querySelector('button[onclick="triggerScheduler()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/run-scheduler');
+                const data = await res.json();
+                alert('✅ Processed ' + (data.processed || 0) + ' pending campaigns.');
+                loadCampaignHistory();
+            } catch(e) { alert('Error: ' + e.message); }
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
 
         async function loadCampaignHistory() {
