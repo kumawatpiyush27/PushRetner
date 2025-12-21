@@ -786,8 +786,10 @@ app.get('/store-admin', async (req, res) => {
                         <thead>
                             <tr style="background: #f1f2f3; text-align: left;">
                                 <th style="padding: 10px; border-bottom: 2px solid #ddd;">Date</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Type</th>
                                 <th style="padding: 10px; border-bottom: 2px solid #ddd;">Title</th>
                                 <th style="padding: 10px; border-bottom: 2px solid #ddd;">Message</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ddd;">Status</th>
                                 <th style="padding: 10px; border-bottom: 2px solid #ddd;">Sent To</th>
                             </tr>
                         </thead>
@@ -1131,10 +1133,21 @@ app.get('/store-admin', async (req, res) => {
 
             data.campaigns.forEach(camp => {
                 const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
+                
+                // Status Badge
+                let statusBadge = '<span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px;">Sent</span>';
+                if(camp.status === 'scheduled') statusBadge = '<span style="background: #fff4e5; color: #b45309; padding: 2px 8px; border-radius: 10px; font-weight:600;">⏳ Scheduled</span>';
+                
+                // Type Icon
+                let typeStr = 'Regular';
+                if(camp.type === 'flash') typeStr = '⚡ Flash Sale';
+
                 tbody.innerHTML += '<tr style="border-bottom: 1px solid #eee;">' +
                     '<td style="padding: 10px; color: #666; font-size: 13px;">' + date + '</td>' +
+                    '<td style="padding: 10px; font-weight: 500; font-size: 13px;">' + typeStr + '</td>' +
                     '<td style="padding: 10px; font-weight: 500;">' + camp.title + '</td>' +
                     '<td style="padding: 10px; color: #555;">' + camp.message.substring(0, 50) + '...</td>' +
+                    '<td style="padding: 10px;">' + statusBadge + '</td>' +
                     '<td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">' + camp.sent_count + '</span></td>' +
                 '</tr>';
             });
@@ -1742,6 +1755,61 @@ app.post('/api/track-event', async (req, res) => {
         }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+/* CRON JOB for Scheduler */
+app.get('/api/run-scheduler', async (req, res) => {
+    try {
+        const db = getPool();
+        const pending = await db.query("SELECT * FROM campaigns WHERE status = 'scheduled' AND scheduled_at <= NOW()");
+        let processed = 0;
+
+        for (const camp of pending.rows) {
+            const subs = await SubscriptionModel.findByStore(camp.store_id);
+            let sent = 0;
+
+            // Fetch Icon
+            const storeRes = await db.query('SELECT logo_url FROM stores WHERE store_id = $1', [camp.store_id]);
+            const icon = (storeRes.rows[0] && storeRes.rows[0].logo_url) ? storeRes.rows[0].logo_url : 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
+
+            const options = {
+                vapidDetails: {
+                    subject: 'mailto:admin@zyrajewel.co.in',
+                    publicKey: process.env.PUBLIC_KEY,
+                    privateKey: process.env.PRIVATE_KEY,
+                }
+            };
+
+            if (camp.expiry_at) {
+                const ttl = Math.floor((new Date(camp.expiry_at).getTime() - Date.now()) / 1000);
+                if (ttl > 0) options.TTL = ttl;
+            }
+
+            const payload = JSON.stringify({
+                title: camp.title,
+                body: camp.message,
+                url: camp.url,
+                image: camp.image,
+                icon: icon,
+                data: { type: camp.type, expiryAt: camp.expiry_at }
+            });
+
+            for (const sub of subs) {
+                try {
+                    await webPush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload, options);
+                    sent++;
+                } catch (e) { console.error("Cron Push Error", e.message); }
+            }
+
+            await db.query("UPDATE campaigns SET status = 'sent', sent_count = $1 WHERE id = $2", [sent, camp.id]);
+            processed++;
+        }
+        res.json({ success: true, processed });
+
+    } catch (e) {
+        console.error("Cron Error", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 module.exports = app;
