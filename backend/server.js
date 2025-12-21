@@ -1598,7 +1598,7 @@ app.post('/my-store/broadcast', async (req, res) => {
 
         const options = {
             vapidDetails: {
-                subject: 'mailto:admin@zyrajewel.co.in',
+                subject: process.env.VAPID_SUBJECT || 'mailto:admin@retner.app',
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             }
@@ -1774,7 +1774,7 @@ app.get('/api/run-scheduler', async (req, res) => {
 
             const options = {
                 vapidDetails: {
-                    subject: 'mailto:admin@zyrajewel.co.in',
+                    subject: process.env.VAPID_SUBJECT || 'mailto:admin@retner.app',
                     publicKey: process.env.PUBLIC_KEY,
                     privateKey: process.env.PRIVATE_KEY,
                 }
