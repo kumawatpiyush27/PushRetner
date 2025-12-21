@@ -453,6 +453,9 @@ app.get('/store-admin', async (req, res) => {
             <div class="menu-item" onclick="switchView('subscribers')" id="menu-subs">
                 <i class="fas fa-users"></i> Subscribers
             </div>
+            <div class="menu-item" onclick="switchView('settings')" id="menu-set">
+                <i class="fas fa-cog"></i> Settings
+            </div>
             
             <div style="margin-top: auto;">
                 <div class="menu-item" onclick="logout()">
@@ -769,6 +772,24 @@ app.get('/store-admin', async (req, res) => {
                 </div>
             </div>
 
+            <!-- SETTINGS VIEW -->
+            <div id="view-settings" class="content-area hidden">
+                <div class="card" style="max-width: 600px; margin: 0 auto;">
+                    <h3>Store Settings</h3>
+                    <div class="form-group">
+                        <label>Store Name</label>
+                        <input type="text" id="setStoreName" placeholder="My Store">
+                    </div>
+                    <div class="form-group">
+                        <label>Default Logo URL</label>
+                        <input type="text" id="setLogoUrl" placeholder="https://example.com/logo.png">
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">This logo will be used as the default notification icon.</p>
+                    </div>
+                    <button class="new-campaign-btn" onclick="saveSettings()">Save Changes</button>
+                    <div id="saveMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -808,13 +829,17 @@ app.get('/store-admin', async (req, res) => {
                 document.getElementById('menu-subs').classList.add('active');
                 loadSubscribers();
             }
+            if(viewName === 'settings') {
+                document.getElementById('menu-set').classList.add('active');
+                loadSettings();
+            }
 
             // Hide all content areas
             document.querySelectorAll('.content-area').forEach(v => v.classList.add('hidden'));
             
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List'};
+            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', settings: 'Settings'};
             document.getElementById('pageTitle').innerText = titles[viewName];
 
             // Reset wizard state if switching to campaign view
@@ -1134,6 +1159,49 @@ app.get('/store-admin', async (req, res) => {
                 alert(data.error);
             }
         }
+
+        async function loadSettings() {
+             const res = await fetch('/my-store/details?storeId=' + store.id);
+             const data = await res.json();
+             if(data.success) {
+                 document.getElementById('setStoreName').value = data.store.store_name;
+                 document.getElementById('setLogoUrl').value = data.store.logo_url || '';
+             }
+        }
+
+        async function saveSettings() {
+            const storeName = document.getElementById('setStoreName').value;
+            const logoUrl = document.getElementById('setLogoUrl').value;
+            const btn = document.querySelector('#view-settings button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...';
+            btn.disabled = true;
+            
+            const res = await fetch('/my-store/update-settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ storeId: store.id, storeName, logoUrl })
+            });
+            const data = await res.json();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            
+            if(data.success) {
+                // Update Local Store Object
+                store.name = storeName;
+                localStorage.setItem('store', JSON.stringify(store));
+                document.getElementById('storeNameDisplay').innerText = storeName;
+                document.getElementById('userInitials').innerText = storeName.charAt(0).toUpperCase();
+
+                const msg = document.getElementById('saveMsg');
+                if(msg) {
+                    msg.style.display = 'block';
+                    setTimeout(() => msg.style.display = 'none', 3000);
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
     </script>
 </body>
 </html>`);
@@ -1179,6 +1247,19 @@ app.get('/my-store/subscribers', async (req, res) => {
 app.post('/my-store/broadcast', async (req, res) => {
     const { storeId, title, message, url, image, icon, actions } = req.body;
     try {
+        const db = getPool();
+        let finalIcon = icon;
+
+        // Use Store Logo if icon is not provided
+        if (!finalIcon) {
+            const storeRes = await db.query('SELECT logo_url FROM stores WHERE store_id = $1', [storeId]);
+            if (storeRes.rows.length > 0 && storeRes.rows[0].logo_url) {
+                finalIcon = storeRes.rows[0].logo_url;
+            } else {
+                finalIcon = 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
+            }
+        }
+
         const subs = await SubscriptionModel.findByStore(storeId);
 
         const options = {
@@ -1194,7 +1275,7 @@ app.post('/my-store/broadcast', async (req, res) => {
             body: message,
             url,
             image,
-            icon,
+            icon: finalIcon,
             actions
         });
 
@@ -1221,6 +1302,29 @@ app.post('/my-store/broadcast', async (req, res) => {
         } catch (dbErr) { console.error('Failed to save campaign history:', dbErr); }
 
         res.json({ success: true, sent });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+/* Settings API */
+app.get('/my-store/details', async (req, res) => {
+    const { storeId } = req.query;
+    try {
+        const db = getPool();
+        const result = await db.query('SELECT store_name, logo_url FROM stores WHERE store_id = $1', [storeId]);
+        if (result.rows.length > 0) {
+            res.json({ success: true, store: result.rows[0] });
+        } else {
+            res.json({ success: false, error: 'Store not found' });
+        }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/my-store/update-settings', async (req, res) => {
+    const { storeId, storeName, logoUrl } = req.body;
+    try {
+        const db = getPool();
+        await db.query('UPDATE stores SET store_name = $1, logo_url = $2 WHERE store_id = $3', [storeName, logoUrl, storeId]);
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
