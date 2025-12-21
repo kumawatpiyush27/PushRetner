@@ -832,6 +832,11 @@ app.get('/store-admin', async (req, res) => {
                         <input type="text" id="setLogoUrl" placeholder="https://example.com/logo.png">
                         <p style="font-size: 12px; color: #666; margin-top: 4px;">This logo will be used as the default notification icon.</p>
                     </div>
+                    <div class="form-group">
+                        <label>Store Contact Email</label>
+                        <input type="email" id="setStoreEmail" placeholder="e.g. Koregrowtech@gmail.com">
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Used for Push Notification Sender Identity (VAPID Subject).</p>
+                    </div>
                     <button class="new-campaign-btn" onclick="saveSettings()">Save Changes</button>
                     <div id="saveMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
                 </div>
@@ -1364,12 +1369,15 @@ app.get('/store-admin', async (req, res) => {
              if(data.success) {
                  document.getElementById('setStoreName').value = data.store.store_name;
                  document.getElementById('setLogoUrl').value = data.store.logo_url || '';
+                 document.getElementById('setStoreEmail').value = data.store.store_email || '';
              }
         }
 
         async function saveSettings() {
             const storeName = document.getElementById('setStoreName').value;
             const logoUrl = document.getElementById('setLogoUrl').value;
+            const storeEmail = document.getElementById('setStoreEmail').value;
+
             const btn = document.querySelector('#view-settings button');
             const originalText = btn.innerHTML;
             btn.innerHTML = 'Saving...';
@@ -1378,7 +1386,7 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/update-settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, storeName, logoUrl })
+                body: JSON.stringify({ storeId: store.id, storeName, logoUrl, storeEmail })
             });
             const data = await res.json();
             btn.innerHTML = originalText;
@@ -1561,16 +1569,20 @@ app.post('/my-store/broadcast', async (req, res) => {
     try {
         const db = getPool();
         let finalIcon = icon;
+        // Default subject (as requested)
+        let finalSubject = 'mailto:Koregrowtech@gmail.com';
 
-        // Use Store Logo if icon is not provided
-        if (!finalIcon) {
-            const storeRes = await db.query('SELECT logo_url FROM stores WHERE store_id = $1', [storeId]);
-            if (storeRes.rows.length > 0 && storeRes.rows[0].logo_url) {
-                finalIcon = storeRes.rows[0].logo_url;
-            } else {
-                finalIcon = 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
-            }
+        // Fetch Store Details (Logo & Email)
+        const storeRes = await db.query('SELECT logo_url, store_email FROM stores WHERE store_id = $1', [storeId]);
+        if (storeRes.rows.length > 0) {
+            const s = storeRes.rows[0];
+            // Logo Logic
+            if (!finalIcon && s.logo_url) finalIcon = s.logo_url;
+            // Email Logic
+            if (s.store_email) finalSubject = 'mailto:' + s.store_email;
         }
+
+        if (!finalIcon) finalIcon = 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
 
         // Migration: Ensure Columns Exist
         try {
@@ -1598,7 +1610,7 @@ app.post('/my-store/broadcast', async (req, res) => {
 
         const options = {
             vapidDetails: {
-                subject: process.env.VAPID_SUBJECT || 'mailto:admin@retner.app',
+                subject: finalSubject,
                 publicKey: process.env.PUBLIC_KEY,
                 privateKey: process.env.PRIVATE_KEY,
             }
@@ -1655,7 +1667,10 @@ app.get('/my-store/details', async (req, res) => {
     const { storeId } = req.query;
     try {
         const db = getPool();
-        const result = await db.query('SELECT store_name, logo_url FROM stores WHERE store_id = $1', [storeId]);
+        // Ensure email col exists
+        try { await db.query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS store_email TEXT'); } catch (e) { }
+
+        const result = await db.query('SELECT store_name, logo_url, store_email FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, store: result.rows[0] });
         } else {
@@ -1665,10 +1680,10 @@ app.get('/my-store/details', async (req, res) => {
 });
 
 app.post('/my-store/update-settings', async (req, res) => {
-    const { storeId, storeName, logoUrl } = req.body;
+    const { storeId, storeName, logoUrl, storeEmail } = req.body;
     try {
         const db = getPool();
-        await db.query('UPDATE stores SET store_name = $1, logo_url = $2 WHERE store_id = $3', [storeName, logoUrl, storeId]);
+        await db.query('UPDATE stores SET store_name = $1, logo_url = $2, store_email = $3 WHERE store_id = $4', [storeName, logoUrl, storeEmail, storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1768,13 +1783,15 @@ app.get('/api/run-scheduler', async (req, res) => {
             const subs = await SubscriptionModel.findByStore(camp.store_id);
             let sent = 0;
 
-            // Fetch Icon
-            const storeRes = await db.query('SELECT logo_url FROM stores WHERE store_id = $1', [camp.store_id]);
-            const icon = (storeRes.rows[0] && storeRes.rows[0].logo_url) ? storeRes.rows[0].logo_url : 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
+            // Fetch Icon & Email
+            const storeRes = await db.query('SELECT logo_url, store_email FROM stores WHERE store_id = $1', [camp.store_id]);
+            const s = storeRes.rows[0] || {};
+            const icon = s.logo_url || 'https://cdn-icons-png.flaticon.com/512/733/733585.png';
+            const subject = s.store_email ? 'mailto:' + s.store_email : 'mailto:Koregrowtech@gmail.com';
 
             const options = {
                 vapidDetails: {
-                    subject: process.env.VAPID_SUBJECT || 'mailto:admin@retner.app',
+                    subject: subject,
                     publicKey: process.env.PUBLIC_KEY,
                     privateKey: process.env.PRIVATE_KEY,
                 }
