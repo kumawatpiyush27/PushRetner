@@ -1591,6 +1591,14 @@ app.post('/my-store/broadcast', async (req, res) => {
             }
         };
 
+        // Calculate TTL (Time To Live) if Expiry is set
+        if (expiryAt) {
+            const ttlSeconds = Math.floor((new Date(expiryAt).getTime() - Date.now()) / 1000);
+            if (ttlSeconds > 0) {
+                options.TTL = ttlSeconds;
+            }
+        }
+
         const payload = JSON.stringify({
             title,
             body: message,
