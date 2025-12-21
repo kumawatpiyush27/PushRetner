@@ -1145,9 +1145,9 @@ app.get('/store-admin', async (req, res) => {
                 const data = await res.json();
                 if(data.debug) {
                     alert('✅ Processed: ' + (data.processed || 0) + 
-                          '\nServer Time (UTC): ' + data.debug.serverTime + 
-                          '\nPending Due: ' + data.debug.pendingMatch + 
-                          '\nTotal Scheduled: ' + data.debug.totalScheduled);
+                          '\\nServer Time (UTC): ' + data.debug.serverTime + 
+                          '\\nPending Due: ' + data.debug.pendingMatch + 
+                          '\\nTotal Scheduled: ' + data.debug.totalScheduled);
                 } else {
                     alert('✅ Processed ' + (data.processed || 0) + ' pending campaigns.');
                 }
