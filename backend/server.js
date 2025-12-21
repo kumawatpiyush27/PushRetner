@@ -232,7 +232,7 @@ app.post('/store-forgot', async (req, res) => {
 });
 
 // Store Admin Dashboard HTML (SSO Enabled)
-app.get('/store-admin', (req, res) => {
+app.get('/store-admin', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     // SSO Handling: Check for Token from Shopify App
@@ -251,15 +251,35 @@ app.get('/store-admin', (req, res) => {
                     domain: decoded.shop
                 };
 
-                console.log(`✅ SSO Login Success for: ${decoded.shop}`);
+                console.log(`✅ SSO Token Valid. Auto-Creating/Syncing Account for: ${shopId}`);
+
+                // AUTO-REGISTER IN DB
+                try {
+                    const db = getPool();
+                    await db.query(`
+                        INSERT INTO stores (store_id, store_name, password) 
+                        VALUES ($1, $2, 'sso-managed') 
+                        ON CONFLICT (store_id) DO UPDATE SET store_name = $2
+                     `, [shopId, shopId]);
+                    console.log(`✅ Account Synced in DB: ${shopId}`);
+                } catch (dbErr) {
+                    console.error("⚠️ SSO DB Upsert Error:", dbErr.message);
+                }
 
                 // Inject Script to Save Session & Reload Clean
                 return res.send(`
                      <html><body style="font-family:sans-serif; text-align:center; padding-top:50px;">
                      <h2>Logging you in...</h2>
-                     <p>Verifying secure session for ${decoded.shop}</p>
+                     <p>Setting up your dashboard for ${decoded.shop}</p>
                      <script>
+                         // Clear OLD Session
+                         localStorage.removeItem('store');
+                         sessionStorage.clear();
+                         
+                         // Set NEW Session
                          localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
+                         
+                         // Redirect
                          window.location.href = '/store-admin';
                      </script>
                      </body></html>
