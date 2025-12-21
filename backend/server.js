@@ -396,6 +396,15 @@ app.get('/store-admin', async (req, res) => {
         .chart-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
 
         @media (max-width: 1000px) { .stats-grid-4, .charts-grid-2 { grid-template-columns: 1fr; } }
+        
+        /* TOGGLE SWITCH */
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #008060; }
+        input:focus + .slider { box-shadow: 0 0 1px #008060; }
+        input:checked + .slider:before { transform: translateX(26px); }
     </style>
 </head>
 <body>
@@ -803,10 +812,9 @@ app.get('/store-admin', async (req, res) => {
                                  <h4 style="margin: 0; font-size: 16px;">Welcome Notification</h4>
                                  <p style="margin: 4px 0 0 0; color: #666; font-size: 13px;">Send a message immediately when someone subscribes.</p>
                              </div>
-                             <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 24px;">
-                                  <input type="checkbox" id="autoWelcomeEnabled" style="opacity: 0; width: 0; height: 0;">
-                                  <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;"></span>
-                                  <span class="slider-toggle" style="position: absolute; content: ''; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;"></span>
+                             <label class="switch">
+                                  <input type="checkbox" id="autoWelcomeEnabled" onchange="toggleWelcomeSettings()">
+                                  <span class="slider round"></span>
                              </label>
                         </div>
                         <div id="welcomeSettings" style="display: none; border-top: 1px solid #eee; padding-top: 16px; margin-top: 10px;">
@@ -823,11 +831,7 @@ app.get('/store-admin', async (req, res) => {
                     <button class="new-campaign-btn" onclick="saveAutomations()" style="margin-top: 20px;">Save Automations</button>
                     <div id="saveAutoMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
                 </div>
-                <style>
-                    input:checked + .slider { background-color: #008060; }
-                    input:focus + .slider { box-shadow: 0 0 1px #008060; }
-                    input:checked + .slider .slider-toggle { transform: translateX(26px); }
-                </style>
+
             </div>
 
         </div>
