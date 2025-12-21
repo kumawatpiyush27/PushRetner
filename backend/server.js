@@ -1155,14 +1155,28 @@ app.get('/store-admin', async (req, res) => {
         // WIZARD LOGIC
         let currentStep = 1;
         
+        let campaignType = 'regular'; // Default
+
         function selectCampaignType(el, type) {
-            document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.selector-card, .selection-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
+            campaignType = type;
         }
 
         function changeStep(dir) {
             const newStep = parseInt(currentStep) + dir;
             if(newStep < 1 || newStep > 4) return;
+
+            // Entering Step 2 (Content)
+            if(newStep === 2 && dir === 1) {
+                if(campaignType === 'flash') {
+                     const t = document.getElementById('campTitle');
+                     const m = document.getElementById('campMsg');
+                     if(!t.value) t.value = "⚡ Flash Sale! 50% Off";
+                     if(!m.value) m.value = "Hurry! Limited time offer ending soon. Shop now!";
+                     updatePreview();
+                }
+            }
 
             if(currentStep === 2 && dir === 1) {
                 if(!document.getElementById('campTitle').value || !document.getElementById('campMsg').value) {
@@ -1253,7 +1267,7 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions })
+                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions, type: campaignType })
             });
             const data = await res.json();
             
