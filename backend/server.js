@@ -1324,8 +1324,16 @@ app.get('/store-admin', async (req, res) => {
             const btn2UrlRaw = document.getElementById('btn2Link').value;
             const btn2Url = appendUTM(btn2UrlRaw || rawUrl);
 
-            const scheduledAt = (scheduleMode === 'later') ? document.getElementById('scheduleTime').value : null;
-            const expiryAt = (campaignType === 'flash') ? document.getElementById('expiryTime').value : null;
+            let scheduledAt = null;
+            if(scheduleMode === 'later') {
+                 const val = document.getElementById('scheduleTime').value;
+                 if(val) scheduledAt = new Date(val).toISOString();
+            }
+            let expiryAt = null;
+            if(campaignType === 'flash') {
+                 const val = document.getElementById('expiryTime').value;
+                 if(val) expiryAt = new Date(val).toISOString();
+            }
 
             const actions = [];
             if(btn1Text) actions.push({ action: btn1Url, title: btn1Text });
