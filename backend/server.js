@@ -1435,7 +1435,9 @@ app.get('/store-admin', async (req, res) => {
                         setTimeout(() => {
                             btn.innerText = originalText;
                             btn.disabled = false;
-                        }, 2000);
+                            // Auto Close
+                            document.getElementById('welcome-edit-area').classList.add('hidden');
+                        }, 1500);
                     } else {
                         alert('Error: ' + data.error);
                         btn.innerText = originalText;
