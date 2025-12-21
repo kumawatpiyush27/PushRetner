@@ -1390,6 +1390,17 @@ app.get('/store-admin', async (req, res) => {
                 automationState.welcome = data.automations.welcome_enabled;
                 document.getElementById('autoWelcomeTitle').value = data.automations.welcome_title || '';
                 document.getElementById('autoWelcomeMsg').value = data.automations.welcome_body || '';
+                
+                // Populate Stats
+                const card = document.getElementById('card-welcome');
+                if(card) {
+                    const stats = card.querySelectorAll('.stat-num');
+                    if(stats.length >= 2) {
+                        stats[0].innerText = data.automations.welcome_sent_count || 0;
+                        stats[1].innerText = data.automations.welcome_click_count || 0;
+                    }
+                }
+                
                 updateWelcomeCardUI();
             }
         }
@@ -1545,8 +1556,10 @@ app.get('/my-store/automations', async (req, res) => {
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_enabled BOOLEAN DEFAULT FALSE`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_title TEXT`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_body TEXT`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_sent_count INT DEFAULT 0`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_click_count INT DEFAULT 0`);
 
-        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body FROM stores WHERE store_id = $1', [storeId]);
+        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, welcome_sent_count, welcome_click_count FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, automations: result.rows[0] });
         } else {
@@ -1575,11 +1588,17 @@ app.post('/api/trigger-welcome', async (req, res) => {
         if (storeRes.rows.length > 0) {
             const settings = storeRes.rows[0];
             if (settings.welcome_enabled) {
+                // Increment Sent Count
+                await db.query('UPDATE stores SET welcome_sent_count = welcome_sent_count + 1 WHERE store_id = $1', [storeId]);
+
                 const payload = JSON.stringify({
                     title: settings.welcome_title || 'Welcome!',
                     body: settings.welcome_body || 'Thanks for subscribing.',
                     icon: settings.logo_url || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-                    url: '/'
+                    data: {
+                        url: '/',
+                        tracking: { type: 'welcome', storeId }
+                    }
                 });
                 const options = {
                     vapidDetails: {
@@ -1598,6 +1617,18 @@ app.post('/api/trigger-welcome', async (req, res) => {
         console.error("Welcome Trigger Failed", e);
         res.status(500).json({ success: false, error: e.message });
     }
+});
+
+/* Tracking API */
+app.post('/api/track-event', async (req, res) => {
+    const { type, storeId, event } = req.body;
+    try {
+        const db = getPool();
+        if (type === 'welcome' && event === 'click') {
+            await db.query('UPDATE stores SET welcome_click_count = welcome_click_count + 1 WHERE store_id = $1', [storeId]);
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 module.exports = app;
