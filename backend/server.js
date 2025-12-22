@@ -1817,14 +1817,6 @@ app.post('/api/track-event', async (req, res) => {
 
 /* CRON JOB for Scheduler */
 app.get('/api/run-scheduler', async (req, res) => {
-    // Simple API Key Check (optional - for security)
-    const apiKey = req.query.key || req.headers['x-api-key'];
-    const validKey = process.env.CRON_SECRET || 'retner-cron-2025';
-
-    if (apiKey !== validKey) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     try {
         const db = getPool();
         const pending = await db.query("SELECT * FROM campaigns WHERE status = 'scheduled' AND scheduled_at <= NOW()");
