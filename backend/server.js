@@ -1811,6 +1811,46 @@ app.get('/my-store/subscribers', async (req, res) => {
     } catch (e) { res.status(500).json({ subscribers: [] }); }
 });
 
+/* Shopify Webhook for Revenue Tracking */
+app.post('/webhooks/shopify/order', async (req, res) => {
+    console.log('Webhook Received: Order Create');
+    const { id, total_price, landing_site, landing_site_ref } = req.body;
+
+    // 1. Identify Campaign
+    let campaignId = null;
+    const urlToCheck = landing_site || landing_site_ref || '';
+    const match = urlToCheck.match(/push_camp_(\d+)/);
+
+    if (match && match[1]) {
+        campaignId = parseInt(match[1]);
+        console.log(`Attributing Order ${id} to Campaign ${campaignId}. Value: ${total_price}`);
+
+        try {
+            const db = getPool();
+            // Update Revenue (Add to existing)
+            await db.query('UPDATE campaigns SET revenue = revenue + $1 WHERE id = $2', [parseFloat(total_price || 0), campaignId]);
+
+            // 2. TAG ORDER on Shopify (Via Remix App)
+            const shopDomain = req.headers['x-shopify-shop-domain'];
+
+            if (shopDomain) {
+                // Call Remix App Internal API to Tag
+                // We use fire-and-forget fetch to avoid blocking webhook response
+                fetch('https://retner-smart-push.vercel.app/api/mark-push-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shop: shopDomain, orderId: id })
+                }).catch(err => console.error('Tagging Call Failed:', err.message));
+            }
+
+        } catch (e) { console.error('Revenue Update Error', e); }
+    } else {
+        console.log('No Push Attribution found for Order', id);
+    }
+
+    res.status(200).send('OK');
+});
+
 // Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
     const { storeId, title, message, url, image, icon, type, scheduledAt, expiryAt, btn1Text, btn1UrlRaw, btn2Text, btn2UrlRaw } = req.body;
