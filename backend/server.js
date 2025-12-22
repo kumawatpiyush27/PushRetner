@@ -44,8 +44,15 @@ const initCampaignTable = async () => {
             url TEXT,
             image TEXT,
             sent_count INTEGER,
+            clicks INTEGER DEFAULT 0,
+            revenue DECIMAL(10,2) DEFAULT 0.00,
             created_at TIMESTAMP DEFAULT NOW()
         );
+        // Migration for existing tables
+        try {
+            await getPool().query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS clicks INTEGER DEFAULT 0');
+            await getPool().query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS revenue DECIMAL(10,2) DEFAULT 0.00');
+        } catch(e) { console.log('Migration note:', e.message); }
     `;
     try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
     catch (e) { console.error('❌ Campaign table error:', e); }
@@ -83,13 +90,13 @@ app.get('/sw.js', (req, res) => {
         self.addEventListener('push', async function (event) {
             try {
                 const message = await event.data.json();
-                const { title, body, icon, url, image, actions } = message;
+                const { title, body, icon, url, image, actions, data } = message; // Added 'data'
                 const options = {
                     body: body || 'New Notification',
                     icon: icon || 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
                     image: image || null,
                     requireInteraction: true,
-                    data: { url: url || '/' },
+                    data: data || { url: url || '/' }, // Use 'data' from payload if available
                     actions: actions || [] // Add Actions here
                 };
                 await event.waitUntil(self.registration.showNotification(title, options));
@@ -97,6 +104,28 @@ app.get('/sw.js', (req, res) => {
         });
         self.addEventListener('notificationclick', function (event) {
             event.notification.close();
+            const url = event.notification.data.url;
+            const campId = event.notification.data.id;
+
+            // Track Click
+            if(campId) {
+                fetch('/api/track/click?id=' + campId, { mode: 'no-cors' });
+            }
+
+            event.waitUntil(
+                clients.matchAll({ type: 'window' }).then(windowClients => {
+                    for (var i = 0; i < windowClients.length; i++) {
+                        var client = windowClients[i];
+                        if (client.url === url && 'focus' in client) {
+                            return client.focus();
+                        }
+                    }
+                    if (clients.openWindow) {
+                        return clients.openWindow(url);
+                    }
+                })
+            );
+        });
             
             // Default URL (Clicking body)
             let openUrl = event.notification.data.url;
@@ -112,6 +141,43 @@ app.get('/sw.js', (req, res) => {
             }
         });
     `);
+});
+
+// --- ANALYTICS TRACKING ROUTES ---
+
+// 1. Track Click
+app.get('/api/track/click', async (req, res) => {
+    const { id } = req.query;
+    if (!id) return res.status(400).send('Missing ID');
+    try {
+        await getPool().query('UPDATE campaigns SET clicks = clicks + 1 WHERE id = $1', [id]);
+        res.status(200).send('OK');
+    } catch (e) { console.error('Track error', e); res.status(500).send('Error'); }
+});
+
+// 2. Track Revenue (Shopify Webhook)
+app.post('/webhooks/shopify/order', async (req, res) => {
+    try {
+        const order = req.body;
+        // Check landing site for UTM
+        // landing_site: "https://my-store.com/products/xyz?utm_source=push-retner&utm_medium=push&utm_campaign=push_camp_123"
+        const landingSite = order.landing_site || order.landing_site_ref;
+
+        if (landingSite && landingSite.includes('utm_campaign=push_camp_')) {
+            const match = landingSite.match(/push_camp_(\d+)/);
+            if (match && match[1]) {
+                const campId = match[1];
+                const value = parseFloat(order.total_price);
+
+                await getPool().query('UPDATE campaigns SET revenue = revenue + $1 WHERE id = $2', [value, campId]);
+                console.log(`💰 Revenue attributed! Campaign ${campId} + $${value}`);
+            }
+        }
+        res.status(200).send('Webhook Received');
+    } catch (e) {
+        console.error('Webhook Error', e);
+        res.status(500).send('Error');
+    }
 });
 
 // Root
@@ -1127,14 +1193,12 @@ app.get('/store-admin', async (req, res) => {
             // POPULATE CARDS with REALISTIC DATA
             const subCount = data.subscribers || 0;
             const campCount = data.campaigns || 0;
-            const impressions = subCount * campCount;
-            // Est Revenue: Avg ₹100 per campaign per 1000 users => (~₹0.1 per impression)
-            // Let's perform: Revenue = Impressions * ₹1.5 (High value for demo)
-            const revenue = (impressions * 1.5).toFixed(2);
+            const impressions = data.totalImpressions || 0;
+            const revenue = data.totalRevenue || 0;
 
             document.getElementById('stat-total-sub').innerText = subCount;
             document.getElementById('stat-total-sent').innerText = campCount;
-            document.getElementById('stat-revenue').innerText = '₹' + revenue;
+            document.getElementById('stat-revenue').innerText = '₹' + revenue.toFixed(2);
             document.getElementById('stat-impressions').innerText = impressions + ' / 5000'; // Higher limit for demo
 
             // Render Sub Chart
@@ -1163,7 +1227,7 @@ app.get('/store-admin', async (req, res) => {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
                         label: 'Revenue',
-                        data: [120, 190, 80, 250, 100, 300, 450], // Keep mock for distribution, or scale it?
+                        data: [revenue * 0.1, revenue * 0.15, revenue * 0.08, revenue * 0.2, revenue * 0.12, revenue * 0.25, revenue * 0.1], // Scale mock data
                         backgroundColor: '#FFCC80',
                         borderRadius: 4
                     }]
@@ -1220,6 +1284,8 @@ app.get('/store-admin', async (req, res) => {
             // ANALYTICS CALCULATION
             let totalSent = 0;
             let totalImpressions = 0;
+            let totalClicks = 0;
+            let totalRevenue = 0;
 
             // STORE GLOBAL
             window.allCampaigns = data.campaigns;
@@ -1228,6 +1294,8 @@ app.get('/store-admin', async (req, res) => {
                 if(camp.status !== 'scheduled') {
                     totalSent++;
                     totalImpressions += (camp.sent_count || 0);
+                    totalClicks += (camp.clicks || 0);
+                    totalRevenue += parseFloat(camp.revenue || 0);
                 }
             });
             
@@ -1246,15 +1314,12 @@ app.get('/store-admin', async (req, res) => {
             if(elTotalImp) elTotalImp.innerText = totalImpressions;
             
             let ctrVal = '0%';
-            if(totalSent > 0) {
-                 const baseCtr = 2.4;
-                 const variance = (Math.random() * 0.8) - 0.4;
-                 ctrVal = (baseCtr + variance).toFixed(2) + '%';
+            if(totalImpressions > 0) {
+                 ctrVal = ((totalClicks / totalImpressions) * 100).toFixed(2) + '%';
             }
             if(elAvgCtr) elAvgCtr.innerText = ctrVal;
 
-            const revVal = (totalImpressions * 1.5).toFixed(2);
-            if(elRevenue) elRevenue.innerText = '₹' + revVal;
+            if(elRevenue) elRevenue.innerText = '₹' + totalRevenue.toFixed(2);
 
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
@@ -1445,22 +1510,23 @@ app.get('/store-admin', async (req, res) => {
             const rawUrl = document.getElementById('campUrl').value;
             
             // UTM Tracking Helper
-            const appendUTM = (url) => {
+            const appendUTM = (url, campId) => {
                 if(!url) return url;
                 const sep = url.indexOf('?') !== -1 ? '&' : '?';
                 const campaign = encodeURIComponent(title.replace(/\s+/g, '-').toLowerCase());
-                return url + sep + 'utm_source=push-retner&utm_medium=push&utm_campaign=' + campaign;
+                return url + sep + 'utm_source=push-retner&utm_medium=push&utm_campaign=push_camp_' + campId;
             };
 
-            const url = appendUTM(rawUrl);
+            // URL will be updated after campaign ID is known
+            let urlForPayload = rawUrl; 
             const icon = document.getElementById('campIcon').value;
             const btn1Text = document.getElementById('btn1Txt').value;
             const btn1UrlRaw = document.getElementById('btn1Link').value;
-            const btn1Url = appendUTM(btn1UrlRaw || rawUrl);
+            let btn1UrlForPayload = btn1UrlRaw || rawUrl;
 
             const btn2Text = document.getElementById('btn2Txt').value;
             const btn2UrlRaw = document.getElementById('btn2Link').value;
-            const btn2Url = appendUTM(btn2UrlRaw || rawUrl);
+            let btn2UrlForPayload = btn2UrlRaw || rawUrl;
 
             let scheduledAt = null;
             if(scheduleMode === 'later') {
@@ -1474,14 +1540,13 @@ app.get('/store-admin', async (req, res) => {
             }
 
             const actions = [];
-            if(btn1Text) actions.push({ action: btn1Url, title: btn1Text });
-            if(btn2Text) actions.push({ action: btn2Url, title: btn2Text });
+            // Actions will be populated after campId is known
 
             // Original fetch call logic
             const res = await fetch('/my-store/broadcast', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, title, message, url, image, icon, actions, type: campaignType, scheduledAt, expiryAt })
+                body: JSON.stringify({ storeId: store.id, title, message, url: rawUrl, image, icon, actions, type: campaignType, scheduledAt, expiryAt, btn1Text, btn1UrlRaw, btn2Text, btn2UrlRaw })
             });
             const data = await res.json();
             
@@ -1698,15 +1763,17 @@ app.get('/my-store/stats', async (req, res) => {
     try {
         const db = getPool();
         const subRes = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
-        const campRes = await db.query('SELECT COUNT(*) FROM campaigns WHERE store_id = $1', [storeId]);
+        const campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue FROM campaigns WHERE store_id = $1', [storeId]);
         const recentRes = await db.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 5', [storeId]);
 
         res.json({
             subscribers: parseInt(subRes.rows[0].count),
-            campaigns: parseInt(campRes.rows[0].count),
+            campaigns: parseInt(campRes.rows[0].total_campaigns || 0),
+            totalImpressions: parseInt(campRes.rows[0].total_impressions || 0),
+            totalRevenue: parseFloat(campRes.rows[0].total_revenue || 0),
             recentCampaigns: recentRes.rows
         });
-    } catch (e) { res.status(500).json({ subscribers: 0, campaigns: 0, recentCampaigns: [] }); }
+    } catch (e) { res.status(500).json({ subscribers: 0, campaigns: 0, totalImpressions: 0, totalRevenue: 0, recentCampaigns: [] }); }
 });
 
 // Campaign History API
@@ -1729,9 +1796,8 @@ app.get('/my-store/subscribers', async (req, res) => {
 });
 
 // Broadcast API
-// Broadcast API
 app.post('/my-store/broadcast', async (req, res) => {
-    const { storeId, title, message, url, image, icon, actions, type, scheduledAt, expiryAt } = req.body;
+    const { storeId, title, message, url, image, icon, type, scheduledAt, expiryAt, btn1Text, btn1UrlRaw, btn2Text, btn2UrlRaw } = req.body;
     try {
         const db = getPool();
         let finalIcon = icon;
@@ -1758,15 +1824,33 @@ app.post('/my-store/broadcast', async (req, res) => {
             await db.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'sent'`);
         } catch (err) { console.log('Migration error (ignorable):', err.message); }
 
+        // Insert campaign first to get an ID for tracking
+        const insertResult = await db.query(
+            `INSERT INTO campaigns (store_id, title, message, url, image, status, type, scheduled_at, expiry_at, sent_count) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0) RETURNING id`,
+            [storeId, title, message, url, image, scheduledAt ? 'scheduled' : 'sent', type || 'regular', scheduledAt, expiryAt]
+        );
+        const campId = insertResult.rows[0].id; // Get the generated ID
+
+        // UTM Tracking Helper
+        const appendUTM = (originalUrl, campaignId) => {
+            if (!originalUrl) return originalUrl;
+            const sep = originalUrl.indexOf('?') !== -1 ? '&' : '?';
+            const campaign = encodeURIComponent(title.replace(/\s+/g, '-').toLowerCase());
+            return originalUrl + sep + 'utm_source=push-retner&utm_medium=push&utm_campaign=push_camp_' + campaignId;
+        };
+
+        const finalUrl = appendUTM(url, campId);
+
+        const actions = [];
+        if (btn1Text) actions.push({ action: appendUTM(btn1UrlRaw || url, campId), title: btn1Text });
+        if (btn2Text) actions.push({ action: appendUTM(btn2UrlRaw || url, campId), title: btn2Text });
+
         // CHECK IF SCHEDULED (Future)
         if (scheduledAt) {
             const scheduleDate = new Date(scheduledAt);
             if (scheduleDate > new Date()) {
-                // Save as Scheduled (DO NOT SEND)
-                await db.query(
-                    `INSERT INTO campaigns (store_id, title, message, url, image, status, type, scheduled_at, expiry_at, sent_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
-                    [storeId, title, message, url, image, 'scheduled', type || 'regular', scheduledAt, expiryAt]
-                );
+                // Campaign already saved as 'scheduled' above.
                 return res.json({ success: true, sent: 0, status: 'scheduled' });
             }
         }
@@ -1793,11 +1877,13 @@ app.post('/my-store/broadcast', async (req, res) => {
         const payload = JSON.stringify({
             title,
             body: message,
-            url,
+            url: finalUrl,
             image,
             icon: finalIcon,
             actions,
             data: {
+                id: campId, // Pass ID for tracking
+                url: finalUrl, // Pass final URL for service worker
                 expiryAt, // Pass expiry to Service Worker if needed
                 type
             }
@@ -1815,14 +1901,13 @@ app.post('/my-store/broadcast', async (req, res) => {
             } catch (e) { console.error('Push failed', e.message); }
         }
 
-        // Save to History (Sent)
+        // Update History (Sent Count)
         try {
-            await initCampaignTable(); // Ensure table exists
             await db.query(
-                `INSERT INTO campaigns (store_id, title, message, url, image, status, type, expiry_at, sent_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [storeId, title, message, url, image, 'sent', type || 'regular', expiryAt, sent]
+                `UPDATE campaigns SET sent_count = $1, status = 'sent' WHERE id = $2`,
+                [sent, campId]
             );
-        } catch (dbErr) { console.error('Failed to save campaign history:', dbErr); }
+        } catch (dbErr) { console.error('Failed to update campaign history:', dbErr); }
 
         res.json({ success: true, sent, status: 'sent' });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
