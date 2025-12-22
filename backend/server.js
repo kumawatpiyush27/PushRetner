@@ -1761,6 +1761,7 @@ app.get('/store-admin', async (req, res) => {
 app.get('/my-store/stats', async (req, res) => {
     const { storeId } = req.query;
     try {
+        await initCampaignTable(); // Ensure columns exist (Migration)
         const db = getPool();
         const subRes = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
         const campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue FROM campaigns WHERE store_id = $1', [storeId]);
