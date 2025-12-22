@@ -1767,7 +1767,16 @@ app.get('/my-store/stats', async (req, res) => {
         await initCampaignTable(); // Ensure columns exist (Migration)
         const db = getPool();
         const subRes = await db.query('SELECT COUNT(*) FROM subscriptions WHERE store_id = $1', [storeId]);
-        const campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue FROM campaigns WHERE store_id = $1', [storeId]);
+        let campRes;
+        try {
+            // Try Full Query (Requires revenue/clicks columns)
+            campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue FROM campaigns WHERE store_id = $1', [storeId]);
+        } catch (sqlErr) {
+            console.error('Full Stats Query Failed (using fallback):', sqlErr.message);
+            // Fallback: Count Only (Ignore revenue)
+            campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions FROM campaigns WHERE store_id = $1', [storeId]);
+        }
+
         const recentRes = await db.query('SELECT * FROM campaigns WHERE store_id = $1 ORDER BY created_at DESC LIMIT 5', [storeId]);
 
         res.json({
