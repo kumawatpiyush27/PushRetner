@@ -820,7 +820,20 @@ app.get('/store-admin', async (req, res) => {
                     </div>
                 </div>
 
+                <!-- FILTERS -->
                 <div class="card">
+                     <div style="display: flex; gap: 20px; margin-bottom: 15px; border-bottom: 1px solid #eee;">
+                        <button id="tab-all" class="filter-tab active" onclick="filterTable('all')">All</button>
+                        <button id="tab-sent" class="filter-tab" onclick="filterTable('sent')">Sent (<span id="count-sent">0</span>)</button>
+                        <button id="tab-scheduled" class="filter-tab" onclick="filterTable('scheduled')">Scheduled (<span id="count-scheduled">0</span>)</button>
+                        <button id="tab-draft" class="filter-tab" onclick="void(0)" style="opacity: 0.5; cursor: default;">Draft (0)</button>
+                    </div>
+                    <style>
+                        .filter-tab { background: none; border: none; padding: 10px 5px; cursor: pointer; color: #666; font-weight: 500; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+                        .filter-tab.active { color: #008060; border-bottom-color: #008060; font-weight: 600; }
+                        .filter-tab:hover { color: #333; }
+                    </style>
+
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                         <h3 style="margin:0;">Campaign History</h3>
                         <button class="btn-secondary" onclick="triggerScheduler()" style="padding: 6px 12px; font-size: 13px; cursor: pointer;">
@@ -1201,37 +1214,27 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/campaigns?storeId=' + store.id);
             const data = await res.json();
             const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = '';
+            tbody.innerHTML = ''; // Clear for analytics loop, but rendering is moved to filterTable
+
             
             // ANALYTICS CALCULATION
             let totalSent = 0;
             let totalImpressions = 0;
+
+            // STORE GLOBAL
+            window.allCampaigns = data.campaigns;
 
             data.campaigns.forEach(camp => {
                 if(camp.status !== 'scheduled') {
                     totalSent++;
                     totalImpressions += (camp.sent_count || 0);
                 }
-                
-                const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
-                
-                // Status Badge
-                let statusBadge = '<span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px;">Sent</span>';
-                if(camp.status === 'scheduled') statusBadge = '<span style="background: #fff4e5; color: #b45309; padding: 2px 8px; border-radius: 10px; font-weight:600;">⏳ Scheduled</span>';
-                
-                // Type Icon
-                let typeStr = 'Regular';
-                if(camp.type === 'flash') typeStr = '⚡ Flash Sale';
-
-                tbody.innerHTML += '<tr style="border-bottom: 1px solid #eee;">' +
-                    '<td style="padding: 10px; color: #666; font-size: 13px;">' + date + '</td>' +
-                    '<td style="padding: 10px; font-weight: 500; font-size: 13px;">' + typeStr + '</td>' +
-                    '<td style="padding: 10px; font-weight: 500;">' + camp.title + '</td>' +
-                    '<td style="padding: 10px; color: #555;">' + camp.message.substring(0, 50) + '...</td>' +
-                    '<td style="padding: 10px;">' + statusBadge + '</td>' +
-                    '<td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">' + camp.sent_count + '</span></td>' +
-                '</tr>';
             });
+            
+            // INIT FILTER
+            filterTable('all');
+
+            // UPDATE ANALYTICS UI
             
             // UPDATE ANALYTICS UI
             const elTotalCamp = document.getElementById('histTotalCamp');
@@ -1256,6 +1259,56 @@ app.get('/store-admin', async (req, res) => {
             if(data.campaigns.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No campaigns sent yet.</td></tr>';
             }
+        }
+
+        function filterTable(type) {
+             const tabs = ['all', 'sent', 'scheduled', 'draft'];
+             tabs.forEach(t => { 
+                const el = document.getElementById('tab-'+t);
+                if(el) {
+                    if(t === type) el.classList.add('active');
+                    else el.classList.remove('active'); 
+                }
+             });
+
+             const tbody = document.getElementById('historyTableBody');
+             tbody.innerHTML = '';
+             
+             let filtered = [];
+             if(!window.allCampaigns) window.allCampaigns = [];
+             
+             if(type === 'all') filtered = window.allCampaigns;
+             else if(type === 'sent') filtered = window.allCampaigns.filter(c => c.status !== 'scheduled');
+             else if(type === 'scheduled') filtered = window.allCampaigns.filter(c => c.status === 'scheduled');
+             
+             // Update Counts
+             const sentCount = window.allCampaigns.filter(c => c.status !== 'scheduled').length;
+             const schCount = window.allCampaigns.filter(c => c.status === 'scheduled').length;
+             if(document.getElementById('count-sent')) document.getElementById('count-sent').innerText = sentCount;
+             if(document.getElementById('count-scheduled')) document.getElementById('count-scheduled').innerText = schCount;
+
+             if(filtered.length === 0) {
+                  tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #999;">No campaigns found.</td></tr>';
+                  return;
+             }
+
+             filtered.forEach(camp => {
+                const date = new Date(camp.created_at).toLocaleDateString() + ' ' + new Date(camp.created_at).toLocaleTimeString();
+                let statusBadge = '<span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px;">Sent</span>';
+                if(camp.status === 'scheduled') statusBadge = '<span style="background: #fff4e5; color: #b45309; padding: 2px 8px; border-radius: 10px; font-weight:600;">⏳ Scheduled</span>';
+                
+                let typeStr = 'Regular';
+                if(camp.type === 'flash') typeStr = '⚡ Flash Sale';
+                
+                tbody.innerHTML += '<tr style="border-bottom: 1px solid #eee;">' +
+                    '<td style="padding: 10px; color: #666; font-size: 13px;">' + date + '</td>' +
+                    '<td style="padding: 10px; font-weight: 500; font-size: 13px;">' + typeStr + '</td>' +
+                    '<td style="padding: 10px; font-weight: 500;">' + camp.title + '</td>' +
+                    '<td style="padding: 10px; color: #555;">' + camp.message.substring(0, 50) + '...</td>' +
+                    '<td style="padding: 10px;">' + statusBadge + '</td>' +
+                    '<td style="padding: 10px;"><span style="background: #e4e5e7; padding: 2px 8px; border-radius: 10px; font-size: 12px;">' + camp.sent_count + '</span></td>' +
+                '</tr>';
+             });
         }
 
         async function loadSubscribers() {
