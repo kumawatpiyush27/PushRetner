@@ -1773,7 +1773,10 @@ app.get('/my-store/stats', async (req, res) => {
             totalRevenue: parseFloat(campRes.rows[0].total_revenue || 0),
             recentCampaigns: recentRes.rows
         });
-    } catch (e) { res.status(500).json({ subscribers: 0, campaigns: 0, totalImpressions: 0, totalRevenue: 0, recentCampaigns: [] }); }
+    } catch (e) {
+        console.error('Stats Error:', e);
+        res.status(500).json({ error: e.message, subscribers: 0, campaigns: 0, totalImpressions: 0, totalRevenue: 0, recentCampaigns: [] });
+    }
 });
 
 // Campaign History API
