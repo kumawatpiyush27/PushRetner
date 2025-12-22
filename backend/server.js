@@ -711,8 +711,8 @@ app.get('/store-admin', async (req, res) => {
                                         <div class="selection-title">Send Now</div>
                                         <div class="selection-desc">Campaign will be sent immediately.</div>
                                     </div>
-                                    <div class="selection-card" id="sel-later" onclick="toggleSchedule('later')">
-                                        <div class="selection-title">Schedule for Later</div>
+                                    <div class="selection-card" id="sel-later" style="opacity: 0.6; cursor: not-allowed; border: 1px solid #eee;">
+                                        <div class="selection-title">Schedule for Later (Coming Soon 🚀)</div>
                                         <div class="selection-desc">Pick a future date and time.</div>
                                     </div>
                                 </div>
