@@ -46,16 +46,19 @@ const initCampaignTable = async () => {
             sent_count INTEGER,
             clicks INTEGER DEFAULT 0,
             revenue DECIMAL(10,2) DEFAULT 0.00,
-            created_at TIMESTAMP DEFAULT NOW()
         );
+    `;
+    try {
+        await getPool().query(query);
+
         // Migration for existing tables
         try {
             await getPool().query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS clicks INTEGER DEFAULT 0');
             await getPool().query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS revenue DECIMAL(10,2) DEFAULT 0.00');
-        } catch(e) { console.log('Migration note:', e.message); }
-    `;
-    try { await getPool().query(query); console.log('✅ Campaigns table ready'); }
-    catch (e) { console.error('❌ Campaign table error:', e); }
+            console.log('✅ Campaigns table migrated');
+        } catch (e) { console.log('Migration note:', e.message); }
+
+    } catch (e) { console.error('❌ Campaign table error:', e); }
 };
 // Init Stores Table
 const initStoresTable = async () => {
