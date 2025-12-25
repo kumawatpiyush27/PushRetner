@@ -1996,8 +1996,9 @@ app.post('/my-store/broadcast', async (req, res) => {
         const options = {
             vapidDetails: {
                 subject: finalSubject,
-                publicKey: (process.env.PUBLIC_KEY || '').trim(),
-                privateKey: (process.env.PRIVATE_KEY || '').trim(),
+                // Hardcoded New Keys (Rotated)
+                publicKey: 'BJHfoHdkqKd_1TBdswVMLIR7bhhPoT1LvYLHfgXPo8Vxiy5co7fTCyr_rGv2eL-QV1bivLTw3kwo8Yhtmu2ioEE',
+                privateKey: '7Tkx8ZMeTs-OnEXXtYzSHYAQIDnB6XiUpHBXSX_xHZk',
             }
         };
 
