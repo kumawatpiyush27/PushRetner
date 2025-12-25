@@ -2370,8 +2370,22 @@ app.post('/api/super/update-limit', async (req, res) => {
 app.post('/api/super/delete-store', async (req, res) => {
     if (req.body.token !== 'super_secret_token_x99') return res.status(403).json({});
     const db = getPool();
-    await db.query('DELETE FROM stores WHERE store_id = $1', [req.body.store_id]);
-    res.json({ success: true });
+    const storeId = req.body.store_id;
+
+    try {
+        console.log(`Deleting Store & Data for: ${storeId}`);
+        // 1. Delete Campaigns
+        await db.query('DELETE FROM campaigns WHERE store_id = $1', [storeId]);
+        // 2. Delete Subscriptions (Users)
+        await db.query('DELETE FROM subscriptions WHERE store_id = $1', [storeId]);
+        // 3. Delete Store Account
+        await db.query('DELETE FROM stores WHERE store_id = $1', [storeId]);
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Delete Store Error:", e);
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 module.exports = app;
