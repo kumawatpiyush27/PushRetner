@@ -1623,7 +1623,11 @@ app.get('/store-admin', async (req, res) => {
                 if(data.status === 'scheduled') {
                     alert('📅 Campaign Scheduled Successfully!');
                 } else {
-                    alert('✅ Sent to ' + data.sent + ' subscribers!');
+                    if(data.sent === 0 && data.lastError) {
+                        alert('⚠️ Sent to 0. Reason: ' + data.lastError);
+                    } else {
+                        alert('✅ Sent to ' + data.sent + ' subscribers!');
+                    }
                 }
                 switchView('dashboard'); // Go back to dash
                 // Reset Wizard
@@ -1992,8 +1996,8 @@ app.post('/my-store/broadcast', async (req, res) => {
         const options = {
             vapidDetails: {
                 subject: finalSubject,
-                publicKey: process.env.PUBLIC_KEY,
-                privateKey: process.env.PRIVATE_KEY,
+                publicKey: (process.env.PUBLIC_KEY || '').trim(),
+                privateKey: (process.env.PRIVATE_KEY || '').trim(),
             }
         };
 
@@ -2021,6 +2025,7 @@ app.post('/my-store/broadcast', async (req, res) => {
         });
 
         let sent = 0;
+        let lastError = null;
         for (const sub of subs) {
             try {
                 await webPush.sendNotification(
@@ -2029,7 +2034,10 @@ app.post('/my-store/broadcast', async (req, res) => {
                     options
                 );
                 sent++;
-            } catch (e) { console.error('Push failed', e.message); }
+            } catch (e) {
+                console.error('Push failed', e.message);
+                lastError = e.message;
+            }
         }
 
         // Update History (Sent Count)
@@ -2040,7 +2048,7 @@ app.post('/my-store/broadcast', async (req, res) => {
             );
         } catch (dbErr) { console.error('Failed to update campaign history:', dbErr); }
 
-        res.json({ success: true, sent, status: 'sent' });
+        res.json({ success: true, sent, status: 'sent', lastError });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
