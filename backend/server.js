@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const webPush = require('web-push');
 const path = require('path');
+const crypto = require('crypto'); // Restored for HMAC
 const jwt = require('jsonwebtoken'); // Added for SSO
 const SubscriptionModel = require('./subscriptionModel');
 const cors = require('cors');
@@ -13,8 +14,13 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Pool
 // Database Pool (Lazy Init)
@@ -158,8 +164,32 @@ app.get('/api/track/click', async (req, res) => {
     } catch (e) { console.error('Track error', e); res.status(500).send('Error'); }
 });
 
+// --- SHOPIFY WEBHOOK HELPERS & GDPR ---
+const verifyShopifyWebhook = (req, res, next) => {
+    const hmac = req.get('X-Shopify-Hmac-Sha256');
+    if (!hmac) return res.status(401).send('Missing HMAC header');
+    try {
+        const generatedHash = crypto
+            .createHmac('sha256', process.env.SHOPIFY_API_SECRET || '')
+            .update(req.rawBody)
+            .digest('base64');
+        if (generatedHash !== hmac) {
+            return res.status(401).send('HMAC validation failed');
+        }
+        next();
+    } catch (e) {
+        console.error("HMAC Error:", e);
+        return res.status(500).send("Server Error Verification");
+    }
+};
+
+// MANDATORY GDPR WEBHOOKS
+app.post('/webhooks/shopify/redact/customer', verifyShopifyWebhook, (req, res) => res.status(200).send());
+app.post('/webhooks/shopify/redact/shop', verifyShopifyWebhook, (req, res) => res.status(200).send());
+app.post('/webhooks/shopify/data/customer', verifyShopifyWebhook, (req, res) => res.status(200).send());
+
 // 2. Track Revenue (Shopify Webhook)
-app.post('/webhooks/shopify/order', async (req, res) => {
+app.post('/webhooks/shopify/order', verifyShopifyWebhook, async (req, res) => {
     try {
         const order = req.body;
         // Check landing site for UTM
@@ -300,6 +330,29 @@ app.post('/store-forgot', async (req, res) => {
     }
 });
 
+// CLICK TRACKING ENDPOINT
+app.get('/track-click', async (req, res) => {
+    const { url, c } = req.query;
+
+    // Asynchronously update click count
+    if (c) {
+        try {
+            const db = getPool();
+            await db.query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS clicks INTEGER DEFAULT 0');
+            await db.query('UPDATE campaigns SET clicks = COALESCE(clicks, 0) + 1 WHERE id = $1', [c]);
+        } catch (e) {
+            console.error("Click Tracking DB Error:", e.message);
+        }
+    }
+
+    // Redirect to destination
+    if (url) {
+        res.redirect(url);
+    } else {
+        res.send("Invalid Link");
+    }
+});
+
 // Store Admin Dashboard HTML (SSO Enabled)
 app.get('/store-admin', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -307,7 +360,7 @@ app.get('/store-admin', async (req, res) => {
     // SSO Handling: Check for Token from Shopify App
     if (req.query.sso_token) {
         try {
-            const secret = process.env.SSO_SECRET || process.env.SHOPIFY_API_SECRET;
+            const secret = 'retner_sso_final_2025';
             // Only verify if secret is available
             if (secret) {
                 const decoded = jwt.verify(req.query.sso_token, secret);
@@ -356,7 +409,13 @@ app.get('/store-admin', async (req, res) => {
             }
         } catch (e) {
             console.error("❌ SSO Verification Failed:", e.message);
-            // Fallback to normal login screen if token is invalid/expired
+            // DEBUG: Show Error on Screen
+            return res.send(`<div style="padding:50px; text-align:center; color:red; font-family:sans-serif;">
+                <h1>SSO Verification Error</h1>
+                <p><strong>Error:</strong> ${e.message}</p>
+                <p>Try refreshing the Shopify App page completely.</p>
+                <a href="/store-admin">Go to Login</a>
+            </div>`);
         }
     }
 
@@ -370,8 +429,8 @@ app.get('/store-admin', async (req, res) => {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #008060;
-            --primary-hover: #004c3f;
+            --primary: #2563EB;
+            --primary-hover: #1E40AF;
             --bg: #f6f6f7;
             --sidebar-width: 240px;
             --text-dark: #202223;
@@ -392,8 +451,8 @@ app.get('/store-admin', async (req, res) => {
         .new-campaign-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 4px; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; transition: 0.2s; }
         .new-campaign-btn:hover { background: var(--primary-hover); }
         .menu-item { padding: 10px 12px; color: var(--text-dark); text-decoration: none; display: flex; align-items: center; gap: 12px; border-radius: 4px; margin-bottom: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .menu-item:hover, .menu-item.active { background: #f1f2f3; color: var(--primary); }
-        .menu-item.active { background: #edfffa; }
+        .menu-item:hover, .menu-item.active { background: #EBF5FF; color: var(--primary); }
+        .menu-item.active { background: #EFF6FF; }
 
         /* DASHBOARD WIDGETS */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px; }
@@ -458,7 +517,7 @@ app.get('/store-admin', async (req, res) => {
         .stat-title { color: #6d7175; font-size: 13px; font-weight: 500; }
         .stat-icon { width: 32px; height: 32px; background: #f1f8f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 14px; }
         .stat-value { font-size: 24px; font-weight: 600; color: #303030; margin-bottom: 4px; }
-        .stat-trend { font-size: 12px; color: #008060; display: flex; align-items: center; gap: 4px; background: #e3fcec; padding: 2px 8px; border-radius: 12px; width: fit-content; }
+        .stat-trend { font-size: 12px; color: #2563EB; display: flex; align-items: center; gap: 4px; background: #DBEAFE; padding: 2px 8px; border-radius: 12px; width: fit-content; }
         
         .charts-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
         .chart-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e1e3e5; height: 350px; }
@@ -503,7 +562,7 @@ app.get('/store-admin', async (req, res) => {
     <!-- AUTH SCREEN -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box" id="loginBox">
-            <h2 style="text-align: center; margin-bottom: 24px; color: var(--primary);">Retner Login</h2>
+<div style="text-align: center; margin-bottom: 30px;"><img src="/full-logo.png" style="max-width: 250px; height: auto;"></div>
             <div class="form-group">
                 <label>Store ID</label>
                 <input type="text" id="storeId" placeholder="e.g. zyrajewel">
@@ -535,7 +594,7 @@ app.get('/store-admin', async (req, res) => {
         
         <!-- SIDEBAR -->
         <div class="sidebar">
-            <div class="logo"><i class="fas fa-paper-plane"></i> Retner</div>
+            <div class="logo" style="justify-content: center;"><img src="/full-logo.png" alt="Retner" style="max-height: 50px; max-width: 100%;"></div>
             
             <button class="new-campaign-btn" onclick="switchView('campaign')">
                 <i class="fas fa-plus"></i> New Campaign
@@ -607,12 +666,12 @@ app.get('/store-admin', async (req, res) => {
 
                     <div class="stat-card-premium">
                         <div class="stat-header">
-                            <span class="stat-title">Revenue Generated</span>
-                            <div class="stat-icon" style="background:#fff4e5; color:#d97008;"><i class="fas fa-dollar-sign"></i></div>
+                            <span class="stat-title">Total Clicks (CTR)</span>
+                            <div class="stat-icon" style="background:#fff4e5; color:#d97008;"><i class="fas fa-mouse-pointer"></i></div>
                         </div>
                         <div>
-                            <div class="stat-value" id="stat-revenue">₹0</div>
-                            <div class="stat-trend">+5% vs last month</div>
+                            <div class="stat-value" id="stat-clicks">0 (0.00%)</div>
+                            <div class="stat-trend">Real-time Data</div>
                         </div>
                     </div>
 
@@ -641,7 +700,7 @@ app.get('/store-admin', async (req, res) => {
                     </div>
                     <div class="chart-card">
                         <div class="chart-header">
-                            <h3>Revenue Overview</h3>
+                            <h3>Clicks Overview</h3>
                             <button class="btn-secondary" style="padding: 4px 12px; font-size: 12px;">Last 30 Days</button>
                         </div>
                          <div style="height: 250px;">
@@ -1198,10 +1257,17 @@ app.get('/store-admin', async (req, res) => {
             const campCount = data.campaigns || 0;
             const impressions = data.totalImpressions || 0;
             const revenue = data.totalRevenue || 0;
+            const clicks = data.totalClicks || 0;
+            const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : '0.00';
 
             document.getElementById('stat-total-sub').innerText = subCount;
             document.getElementById('stat-total-sent').innerText = campCount;
-            document.getElementById('stat-revenue').innerText = '₹' + revenue.toFixed(2);
+            if(document.getElementById('stat-clicks')) {
+                 document.getElementById('stat-clicks').innerText = clicks + " (" + ctr + "%)";
+            }
+            if(document.getElementById('stat-revenue')) {
+                 document.getElementById('stat-revenue').innerText = '₹' + revenue.toFixed(2);
+            }
             document.getElementById('stat-impressions').innerText = impressions + ' / 5000'; // Higher limit for demo
 
             // Render Sub Chart
@@ -1213,10 +1279,10 @@ app.get('/store-admin', async (req, res) => {
                     datasets: [{
                         label: 'New Subscribers',
                         data: [0, Math.floor(subCount * 0.2), Math.floor(subCount * 0.5), subCount],
-                        borderColor: '#008060',
+                        borderColor: '#2563EB',
                         tension: 0.4,
                         fill: true,
-                        backgroundColor: 'rgba(0, 128, 96, 0.1)'
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)'
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
@@ -1229,9 +1295,9 @@ app.get('/store-admin', async (req, res) => {
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
-                        label: 'Revenue',
-                        data: [revenue * 0.1, revenue * 0.15, revenue * 0.08, revenue * 0.2, revenue * 0.12, revenue * 0.25, revenue * 0.1], // Scale mock data
-                        backgroundColor: '#FFCC80',
+                        label: 'Clicks',
+                        data: [Math.floor(clicks * 0.1), Math.floor(clicks * 0.15), Math.floor(clicks * 0.2), Math.floor(clicks * 0.25), Math.floor(clicks * 0.1), Math.floor(clicks * 0.15), Math.floor(clicks * 0.05)], 
+                        backgroundColor: '#3B82F6',
                         borderRadius: 4
                     }]
                 },
@@ -1247,7 +1313,7 @@ app.get('/store-admin', async (req, res) => {
                     tbodyRecent.innerHTML += '<tr style="border-bottom: 1px solid #f9f9f9;">' +
                         '<td style="padding: 12px 10px; font-size: 13px; color: #555;">' + date + '</td>' +
                         '<td style="padding: 12px 10px; font-weight: 500; font-size: 14px;">' + camp.title + '</td>' +
-                        '<td style="padding: 12px 10px;"><span style="background: #e3fcec; color: #008060; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">' + camp.sent_count + ' Sent</span></td>' +
+                        '<td style="padding: 12px 10px;"><span style="background: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">' + camp.sent_count + ' Sent</span></td>' +
                     '</tr>';
                 });
             } else {
@@ -1770,7 +1836,7 @@ app.get('/my-store/stats', async (req, res) => {
         let campRes;
         try {
             // Try Full Query (Requires revenue/clicks columns)
-            campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue FROM campaigns WHERE store_id = $1', [storeId]);
+            campRes = await db.query('SELECT COUNT(*) AS total_campaigns, SUM(sent_count) AS total_impressions, SUM(revenue) AS total_revenue, SUM(clicks) AS total_clicks FROM campaigns WHERE store_id = $1', [storeId]);
         } catch (sqlErr) {
             console.error('Full Stats Query Failed (using fallback):', sqlErr.message);
             // Fallback: Count Only (Ignore revenue)
@@ -1784,6 +1850,7 @@ app.get('/my-store/stats', async (req, res) => {
             campaigns: parseInt(campRes.rows[0].total_campaigns || 0),
             totalImpressions: parseInt(campRes.rows[0].total_impressions || 0),
             totalRevenue: parseFloat(campRes.rows[0].total_revenue || 0),
+            totalClicks: parseInt(campRes.rows[0].total_clicks || 0),
             recentCampaigns: recentRes.rows
         });
     } catch (e) {
@@ -1898,9 +1965,17 @@ app.post('/my-store/broadcast', async (req, res) => {
 
         const finalUrl = appendUTM(url, campId);
 
+        // Tracking Helper
+        const createTrackingUrl = (destUrl, cid) => {
+            const baseUrl = process.env.APP_URL || 'https://push-retner.vercel.app';
+            return `${baseUrl}/track-click?url=${encodeURIComponent(destUrl)}&c=${cid}`;
+        };
+
+        const trackedMainUrl = createTrackingUrl(finalUrl, campId);
+
         const actions = [];
-        if (btn1Text) actions.push({ action: appendUTM(btn1UrlRaw || url, campId), title: btn1Text });
-        if (btn2Text) actions.push({ action: appendUTM(btn2UrlRaw || url, campId), title: btn2Text });
+        if (btn1Text) actions.push({ action: createTrackingUrl(appendUTM(btn1UrlRaw || url, campId), campId), title: btn1Text });
+        if (btn2Text) actions.push({ action: createTrackingUrl(appendUTM(btn2UrlRaw || url, campId), campId), title: btn2Text });
 
         // CHECK IF SCHEDULED (Future)
         if (scheduledAt) {
@@ -1933,14 +2008,14 @@ app.post('/my-store/broadcast', async (req, res) => {
         const payload = JSON.stringify({
             title,
             body: message,
-            url: finalUrl,
+            url: trackedMainUrl, // TRACKED
             image,
             icon: finalIcon,
             actions,
             data: {
-                id: campId, // Pass ID for tracking
-                url: finalUrl, // Pass final URL for service worker
-                expiryAt, // Pass expiry to Service Worker if needed
+                id: campId,
+                url: trackedMainUrl, // TRACKED
+                expiryAt,
                 type
             }
         });
@@ -2140,6 +2215,163 @@ app.get('/api/run-scheduler', async (req, res) => {
         console.error("Cron Error", e);
         res.status(500).json({ error: e.message });
     }
+});
+
+/* =========================================
+   SUPER ADMIN PANEL (Hidden Route)
+   ========================================= */
+const SUPER_PASS = 'piyush_admin_2025';
+
+app.get('/master-admin', (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Retner Super Admin</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>body{font-family: system-ui;} .container{max-width:1000px;}</style>
+      </head>
+      <body class="bg-light">
+      <div class="container mt-5">
+        <h2 class="mb-4">Retner Super Admin</h2>
+        
+        <div id="loginSection" class="card p-4 shadow-sm">
+            <form id="loginForm">
+                <label>Admin Password</label>
+                <input type="password" id="adminPass" class="form-control mb-3" placeholder="Enter Password">
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+            </form>
+        </div>
+
+        <div id="dashboardSection" style="display:none;" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>All Stores</h3>
+                <button class="btn btn-secondary btn-sm" onclick="location.reload()">Refresh</button>
+            </div>
+            <div class="card shadow-sm">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Store ID (Name)</th>
+                            <th>Email</th>
+                            <th>Monthly Limit</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storeTable"></tbody>
+                </table>
+            </div>
+        </div>
+      </div>
+
+      <script>
+        const API_URL = '/api/super';
+        let adminToken = localStorage.getItem('super_token');
+
+        if(adminToken) { showDashboard(); }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('adminPass').value;
+            const res = await fetch(API_URL + '/login', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({pass}) 
+            });
+            const data = await res.json();
+            if(data.success) {
+                adminToken = data.token;
+                localStorage.setItem('super_token', adminToken);
+                showDashboard();
+            } else { alert('Wrong Password'); }
+        });
+
+        function showDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            loadStores();
+        }
+
+        async function loadStores() {
+            const res = await fetch(API_URL + '/stores?token=' + adminToken);
+            if(res.status === 403) { localStorage.removeItem('super_token'); location.reload(); return; }
+            const data = await res.json();
+            const tbody = document.getElementById('storeTable');
+            tbody.innerHTML = data.stores.map(s => \`
+                <tr>
+                    <td>
+                        <strong>\${s.store_name || s.store_id}</strong><br>
+                        <small class="text-muted">\${s.store_id}</small>
+                    </td>
+                    <td>\${s.store_email || '-'}</td>
+                    <td>
+                        <div class="input-group input-group-sm" style="width:150px">
+                            <input type="number" class="form-control" value="\${s.monthly_limit || 1000}" id="limit-\${s.store_id}">
+                            <button class="btn btn-outline-success" onclick="updateLimit('\${s.store_id}')">Set</button>
+                        </div>
+                    </td>
+                    <td>\${new Date(s.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteStore('\${s.store_id}')">Delete</button>
+                    </td>
+                </tr>
+            \`).join('');
+        }
+
+        async function updateLimit(id) {
+            const limit = document.getElementById('limit-'+id).value;
+            await fetch(API_URL + '/update-limit', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({token:adminToken, store_id:id, limit}) 
+            });
+            alert('Limit Updated!');
+        }
+
+        async function deleteStore(id) {
+            if(!confirm('Are you sure you want to DELETE ' + id + '? This cannot be undone.')) return;
+            const res = await fetch(API_URL + '/delete-store', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({token:adminToken, store_id:id}) 
+            });
+            if(res.ok) { loadStores(); }
+        }
+      </script>
+      </body>
+      </html>
+    `);
+});
+
+app.post('/api/super/login', (req, res) => {
+    if (req.body.pass === SUPER_PASS) res.json({ success: true, token: 'super_secret_token_x99' });
+    else res.json({ success: false });
+});
+
+app.get('/api/super/stores', async (req, res) => {
+    if (req.query.token !== 'super_secret_token_x99') return res.status(403).json({});
+    const db = getPool();
+    // Ensure column exists
+    try { await db.query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS monthly_limit INTEGER DEFAULT 1000'); } catch (e) { }
+
+    // Fetch
+    const result = await db.query('SELECT * FROM stores ORDER BY created_at DESC');
+    res.json({ stores: result.rows });
+});
+
+app.post('/api/super/update-limit', async (req, res) => {
+    if (req.body.token !== 'super_secret_token_x99') return res.status(403).json({});
+    const db = getPool();
+    await db.query('UPDATE stores SET monthly_limit = $1 WHERE store_id = $2', [req.body.limit, req.body.store_id]);
+    res.json({ success: true });
+});
+
+app.post('/api/super/delete-store', async (req, res) => {
+    if (req.body.token !== 'super_secret_token_x99') return res.status(403).json({});
+    const db = getPool();
+    await db.query('DELETE FROM stores WHERE store_id = $1', [req.body.store_id]);
+    res.json({ success: true });
 });
 
 module.exports = app;
