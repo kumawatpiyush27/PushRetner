@@ -1886,8 +1886,6 @@ app.get('/my-store/subscribers', async (req, res) => {
 /*                     SHOPIFY GDPR MANDATORY WEBHOOKS                        */
 /* -------------------------------------------------------------------------- */
 
-const crypto = require('crypto');
-
 // Helper: Verify Shopify HMAC Signature
 function verifyShopifyWebhook(req, res, buf) {
     const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
