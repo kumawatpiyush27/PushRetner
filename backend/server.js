@@ -2450,7 +2450,7 @@ app.get('/privacy', (req, res) => {
             <p>Merchants and end-users have the right to access, correct, or delete their data. End-users can unsubscribe from notifications at any time via their browser settings.</p>
 
             <h2>5. Contact Us</h2>
-            <p>If you have questions about this Privacy Policy, please contact us at: <strong>kumawatpiyush27@gmail.com</strong></p>
+            <p>If you have questions about this Privacy Policy, please contact us at: <strong>Koregrowtech@gmail.com</strong></p>
         </body>
         </html>
     `);

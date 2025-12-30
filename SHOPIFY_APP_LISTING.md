@@ -263,9 +263,9 @@ We understand e-commerce because we are e-commerce. Every feature is designed to
 ## 📞 Contact Information
 
 **Developer:** Piyush Kumawat  
-**Email:** kumawatpiyush27@gmail.com  
+**Email:** Koregrowtech@gmail.com  
 **Support URL:** [Your support page]  
-**Privacy Policy:** [Your privacy policy URL]  
+**Privacy Policy:** https://push-retner.vercel.app/privacy  
 
 ---
 
