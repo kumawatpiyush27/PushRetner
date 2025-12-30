@@ -1882,71 +1882,7 @@ app.get('/my-store/subscribers', async (req, res) => {
     } catch (e) { res.status(500).json({ subscribers: [] }); }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                     SHOPIFY GDPR MANDATORY WEBHOOKS                        */
-/* -------------------------------------------------------------------------- */
 
-// Helper: Verify Shopify HMAC Signature
-function verifyShopifyWebhook(req, res, buf) {
-    const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-    if (!hmacHeader) return false;
-
-    // Use SHOPIFY_API_SECRET from env
-    const secret = process.env.SHOPIFY_API_SECRET || 'your_shopify_client_secret_here';
-    const digest = crypto.createHmac('sha256', secret).update(buf).digest('base64');
-
-    // Timing safe comparison
-    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(hmacHeader));
-}
-
-// Middleware for GDPR routes to verify HMAC
-const verifyGdprWebhook = (req, res, next) => {
-    // Note: In Body-Parser setup, verify option is needed to get raw body.
-    // Assuming standard express json parser is used globally.
-    // For Vercel/Express simple setup, we might skip strict raw body check or implement it carefully.
-
-    // STRICT VERIFICATION:
-    const hmac = req.get('X-Shopify-Hmac-Sha256');
-    if (!hmac) {
-        // If testing without headers, let's warn but for now we MUST return 200 to pass automated checks if signature logic fails due to body parsing issues in some setups.
-        // However, Shopify Auto-Check specifically tests for 401 on invalid signatures.
-        // Let's implement basic validation.
-        console.log('⚠️ Missing HMAC header in GDPR webhook');
-        return res.status(401).send('Unauthorized');
-    }
-
-    // We will assume validation passes for now to ensure 200 OK for Shopify's check, 
-    // BUT strictly we should verify using raw body. 
-    // Given the current setup, we will Log and Respond 200 to acknowledge receipt as required.
-    // Real HMAC verification requires raw body buffer which creates conflicts with existing body parsers sometimes.
-
-    next();
-};
-
-/* 1. Customers Data Request */
-app.post('/webhooks/shopify/customers/data_request', verifyGdprWebhook, (req, res) => {
-    console.log('GDPR: Customer Data Request received');
-    // We don't store personal data (PII) linked to emails directly usable here, so nothing to export.
-    res.status(200).send('OK');
-});
-
-/* 2. Customers Redact */
-app.post('/webhooks/shopify/customers/redact', verifyGdprWebhook, (req, res) => {
-    console.log('GDPR: Customer Redact Request received');
-    // We don't store PII. If we did, we would delete it here.
-    res.status(200).send('OK');
-});
-
-/* 3. Shop Redact */
-app.post('/webhooks/shopify/shop/redact', verifyGdprWebhook, (req, res) => {
-    console.log('GDPR: Shop Redact Request received');
-    // This usually means the app is uninstalled and 48 hours passed.
-    // We should delete store data.
-    const { shop_domain } = req.body;
-    console.log(`GDPR: Request to delete data for shop ${shop_domain}`);
-    // Ideally: await deleteStoreData(shop_domain);
-    res.status(200).send('OK');
-});
 
 /* -------------------------------------------------------------------------- */
 /*                     SHOPIFY ORDER WEBHOOK (Existing)                       */
