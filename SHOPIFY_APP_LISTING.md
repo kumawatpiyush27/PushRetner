@@ -160,22 +160,22 @@ Engage loyal customers with exclusive offers:
 
 ---
 
-## 💰 Pricing
+## 💰 Pricing Plan (Free Only)
 
-**Free to Install**
-- Unlimited subscribers
-- Unlimited campaigns
-- Full feature access
-- Multi-store support
-- Real-time analytics
-- Email support
+**Plan Name:** `Free Forever`
+**Price:** Free ($0)
 
-**Premium Features (Coming Soon)**
-- Advanced segmentation
-- A/B testing
-- Scheduled campaigns
-- Detailed conversion tracking
-- Priority support
+**Plan Features (Copy-Paste into Feature List):**
+- Unlimited Web Push Notifications
+- Automatic Abandoned Cart Recovery
+- Unlimited Subscribers
+- Automated Welcome Messages
+- Real-Time Analytics Dashboard
+- Multi-Store Support
+
+*Note: Select "Free" as billing type. No trial days needed.*
+
+---
 
 ---
 
