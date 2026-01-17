@@ -167,14 +167,14 @@ app.get('/api/track/click', async (req, res) => {
 // --- SHOPIFY WEBHOOK HELPERS & GDPR ---
 const verifyShopifyWebhook = (req, res, next) => {
     const hmac = req.get('X-Shopify-Hmac-Sha256');
-    if (!hmac) return res.status(401).send('Missing HMAC header');
+    if (!hmac) return res.status(400).send('Missing HMAC header');
     try {
         const generatedHash = crypto
             .createHmac('sha256', process.env.SHOPIFY_API_SECRET || '')
             .update(req.rawBody)
             .digest('base64');
         if (generatedHash !== hmac) {
-            return res.status(401).send('HMAC validation failed');
+            return res.status(400).send('HMAC validation failed');
         }
         next();
     } catch (e) {
