@@ -1126,6 +1126,13 @@ app.get('/store-admin', async (req, res) => {
                                      <p class="auto-desc">A notification sent whenever the price of a product is dropped.</p>
                                 </div>
                             </div>
+                             <div class="auto-card-footer">
+                                <div style="font-size: 13px; color: #666;">Coming Soon</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- AUTOMATION EDITOR (NEW FULL PAGE VIEW) -->
             <div id="view-automation-editor" class="content-area hidden">
@@ -1269,14 +1276,6 @@ app.get('/store-admin', async (req, res) => {
                     </div>
 
                 </div>
-                             <div class="auto-card-footer">
-                                <div style="font-size: 13px; color: #666;">Coming Soon</div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
             </div>
 
         </div>
