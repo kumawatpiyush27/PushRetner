@@ -28,6 +28,8 @@ const initTable = async () => {
             store_id TEXT,
             store_name TEXT,
             store_domain TEXT,
+            cart_token TEXT,
+            customer_id TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
         
@@ -35,15 +37,18 @@ const initTable = async () => {
         ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_id TEXT;
         ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_name TEXT;
         ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS store_domain TEXT;
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cart_token TEXT;
+        ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS customer_id TEXT;
         ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
         
         CREATE INDEX IF NOT EXISTS idx_store_id ON subscriptions(store_id);
         CREATE INDEX IF NOT EXISTS idx_store_domain ON subscriptions(store_domain);
+        CREATE INDEX IF NOT EXISTS idx_cart_token ON subscriptions(cart_token);
     `;
     try {
         await getPool().query(query);
         isInitialized = true;
-        console.log('✅ Subscriptions table ready with multi-store support');
+        console.log('✅ Subscriptions table ready with multi-store & cart support');
     } catch (err) {
         console.error('❌ Error creating/updating table:', err);
     }
@@ -55,7 +60,7 @@ const SubscriptionModel = {
             endpoint: data.endpoint ? data.endpoint.substring(0, 50) + '...' : 'MISSING',
             keys: data.keys ? 'present' : 'MISSING',
             storeId: data.storeId || 'not-provided',
-            storeName: data.storeName || 'not-provided'
+            cartToken: data.cartToken || 'none'
         });
 
         const query = `
@@ -65,16 +70,20 @@ const SubscriptionModel = {
                 keys,
                 store_id,
                 store_name,
-                store_domain
+                store_domain,
+                cart_token,
+                customer_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (endpoint) 
             DO UPDATE SET 
                 expiration_time = EXCLUDED.expiration_time,
                 keys = EXCLUDED.keys,
                 store_id = EXCLUDED.store_id,
                 store_name = EXCLUDED.store_name,
-                store_domain = EXCLUDED.store_domain
+                store_domain = EXCLUDED.store_domain,
+                cart_token = COALESCE(EXCLUDED.cart_token, subscriptions.cart_token),
+                customer_id = COALESCE(EXCLUDED.customer_id, subscriptions.customer_id)
             RETURNING *;
         `;
 
@@ -84,6 +93,8 @@ const SubscriptionModel = {
         const storeId = data.storeId || null;
         const storeName = data.storeName || null;
         const storeDomain = data.storeDomain || null;
+        const cartToken = data.cartToken || null;
+        const customerId = data.customerId || null;
 
         try {
             await initTable();
@@ -93,7 +104,9 @@ const SubscriptionModel = {
                 keys,
                 storeId,
                 storeName,
-                storeDomain
+                storeDomain,
+                cartToken,
+                customerId
             ]);
             const row = res.rows[0];
 
@@ -104,8 +117,8 @@ const SubscriptionModel = {
                 expirationTime: row.expiration_time,
                 keys: row.keys,
                 storeId: row.store_id,
-                storeName: row.store_name,
-                storeDomain: row.store_domain,
+                // storeName: row.store_name,
+                // storeDomain: row.store_domain,
                 _id: row.id
             };
         } catch (err) {
@@ -178,7 +191,8 @@ const SubscriptionModel = {
                     storeName: row.store_name,
                     storeDomain: row.store_domain,
                     _id: row.id,
-                    createdAt: row.created_at
+                    createdAt: row.created_at,
+                    cart_token: row.cart_token
                 };
             });
 
