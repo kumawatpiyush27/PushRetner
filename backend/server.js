@@ -2193,9 +2193,24 @@ app.get('/store-admin', async (req, res) => {
                 
                 if (data.automations.abandoned_config) {
                     try {
-                        let parsed = JSON.parse(data.automations.abandoned_config);
+                        let parsed = data.automations.abandoned_config;
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        // Handle double stringification
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        
                         if(parsed && Array.isArray(parsed)) {
                             automationState.abandonedConfig = parsed;
+                            // Update Step 1 Meta immediately to reflect loaded data
+                            const step0 = parsed[0];
+                            if(step0) {
+                                document.getElementById('edit-delay-val').value = step0.delay;
+                                document.getElementById('edit-delay-unit').value = step0.unit;
+                                updateStepMeta();
+                            }
                         }
                     } catch(e) { console.error('JSON Error', e); }
                 } else {
