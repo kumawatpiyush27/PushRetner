@@ -2193,26 +2193,38 @@ app.get('/store-admin', async (req, res) => {
                 
                 if (data.automations.abandoned_config) {
                     try {
+                        // DEBUG ALERTS
+                        // alert("RAW FROM DB: " + data.automations.abandoned_config);
+                        
                         let parsed = data.automations.abandoned_config;
                         if (typeof parsed === 'string') {
                             parsed = JSON.parse(parsed);
                         }
-                        // Handle double stringification
                         if (typeof parsed === 'string') {
                             parsed = JSON.parse(parsed);
                         }
                         
+                        // alert("PARSED: " + JSON.stringify(parsed));
+
                         if(parsed && Array.isArray(parsed)) {
                             automationState.abandonedConfig = parsed;
-                            // Update Step 1 Meta immediately to reflect loaded data
+                            // Update Step 1 Meta immediately
                             const step0 = parsed[0];
                             if(step0) {
                                 document.getElementById('edit-delay-val').value = step0.delay;
                                 document.getElementById('edit-delay-unit').value = step0.unit;
+                                
+                                // FORCE ENABLE STATUS SYNC
+                                document.getElementById('edit-step-enabled').checked = step0.enabled;
+                                
                                 updateStepMeta();
+                                updateStepStatus(); // Sync Visuals
                             }
                         }
-                    } catch(e) { console.error('JSON Error', e); }
+                    } catch(e) { 
+                        console.error('JSON Error', e);
+                        alert("JSON Error: " + e.message);
+                    }
                 } else {
                     // Backwards Compatibility: Migration
                     // If we have old title/body but no config, map it to Reminder 1
