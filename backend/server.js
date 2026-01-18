@@ -1126,6 +1126,149 @@ app.get('/store-admin', async (req, res) => {
                                      <p class="auto-desc">A notification sent whenever the price of a product is dropped.</p>
                                 </div>
                             </div>
+
+            <!-- AUTOMATION EDITOR (NEW FULL PAGE VIEW) -->
+            <div id="view-automation-editor" class="content-area hidden">
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                    <button class="btn-secondary" onclick="switchView('automations')"><i class="fas fa-arrow-left"></i> Back</button>
+                    <h2 style="margin: 0;" id="editor-page-title">Abandoned Cart Recovery</h2>
+                    <span class="badge badge-inactive" id="editor-badge">Inactive</span>
+                </div>
+
+                <!-- STATS BAR -->
+                <div class="card" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 20px; margin-bottom: 20px;">
+                    <div>
+                        <div class="stat-lbl">Impressions</div>
+                        <div class="stat-num" id="edit-stat-imp">0</div>
+                    </div>
+                    <div>
+                        <div class="stat-lbl">Clicks</div>
+                        <div class="stat-num" id="edit-stat-clk">0</div>
+                    </div>
+                    <div>
+                        <div class="stat-lbl">Carts Recovered</div>
+                        <div class="stat-num" id="edit-stat-rec">0</div>
+                    </div>
+                    <div>
+                        <div class="stat-lbl">Revenue</div>
+                        <div class="stat-num" id="edit-stat-rev">₹0</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 400px; gap: 25px;">
+                    
+                    <!-- LEFT: SETTINGS -->
+                    <div>
+                        <!-- TIMING SETTINGS -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h3 style="display: flex; align-items: center; gap: 10px; margin-top: 0;">
+                                <i class="fas fa-clock" style="color: #666;"></i> Timing
+                            </h3>
+                            <div style="display: flex; gap: 10px; align-items: center; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                                <span>Wait for</span>
+                                <input type="number" id="edit-delay-val" value="20" style="width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <select id="edit-delay-unit" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                    <option value="minutes">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                    <option value="days">Days</option>
+                                </select>
+                                <span>after cart is abandoned.</span>
+                            </div>
+                        </div>
+
+                        <!-- CONTENT SETTINGS -->
+                        <div class="card">
+                            <h3 style="margin-top: 0;">Notification Content</h3>
+                            
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" id="edit-auto-title" placeholder="We saved your items!" oninput="updateAutoPreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="edit-auto-msg" rows="3" placeholder="Return to cart..." oninput="updateAutoPreview()"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Primary Link</label>
+                                <input type="text" id="edit-auto-link" value="{checkout_url}" disabled style="background: #f4f4f4; color: #666;">
+                                <p style="font-size: 12px; color: #666; margin-top: 5px;">Linked to subscriber's abandoned checkout automatically.</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Hero Image URL</label>
+                                <input type="text" id="edit-auto-img" placeholder="https://..." oninput="updateAutoPreview()">
+                            </div>
+
+                            <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                                <h4 style="margin: 0 0 15px 0;">Action Buttons</h4>
+                                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label style="font-size: 13px; font-weight: 500;">Button 1 Text</label>
+                                        <input type="text" id="edit-auto-btn1" placeholder="Checkout" oninput="updateAutoPreview()">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 13px; font-weight: 500;">Button 2 Text</label>
+                                        <input type="text" id="edit-auto-btn2" placeholder="View Store" oninput="updateAutoPreview()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ACTIONS FOOTER -->
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn-secondary" onclick="switchView('automations')">Cancel</button>
+                            <button class="btn-primary" onclick="saveAutomationFull()">Save & Activate</button>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: PREVIEW (STICKY) -->
+                    <div>
+                        <div class="card" style="position: sticky; top: 20px;">
+                            <h3 style="margin-top: 0; font-size: 16px; color: #666;">Live Preview</h3>
+                            
+                            <!-- ANDROID PREVIEW -->
+                            <div style="margin-top: 20px;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 5px;">Android</div>
+                                <div class="preview-box">
+                                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                        <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-bell" style="color: #999;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 14px;" id="prev-auto-title">Title</div>
+                                            <div style="font-size: 12px; color: #666;" id="prev-auto-msg">Message...</div>
+                                        </div>
+                                    </div>
+                                    <img id="prev-auto-hero" src="" style="display: none; width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-top: 8px;">
+                                    
+                                    <div style="display: flex; gap: 10px; margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px;" id="prev-auto-btns">
+                                        <span style="font-size: 12px; font-weight: 600; color: #4338ca;" id="prev-auto-b1">BUTTON 1</span>
+                                        <span style="font-size: 12px; font-weight: 600; color: #4338ca;" id="prev-auto-b2">BUTTON 2</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- WINDOWS PREVIEW -->
+                            <div style="margin-top: 30px;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 5px;">Windows 10/11</div>
+                                <div style="background: #333; color: white; padding: 15px; border-radius: 0; font-family: 'Segoe UI', sans-serif; display: flex; gap: 15px;">
+                                     <div style="width: 40px; height: 40px; background: #555; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-shopping-cart"></i>
+                                     </div>
+                                     <div style="flex: 1;">
+                                         <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;" id="prev-win-title">Title</div>
+                                         <div style="font-size: 12px; color: #ccc;" id="prev-win-msg">Message...</div>
+                                         <img id="prev-win-hero" src="" style="display: none; width: 100%; margin-top: 10px; border: 1px solid #444;">
+                                     </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
                              <div class="auto-card-footer">
                                 <div style="font-size: 13px; color: #666;">Coming Soon</div>
                             </div>
@@ -1755,15 +1898,38 @@ app.get('/store-admin', async (req, res) => {
             if(!enabled) document.getElementById('welcome-edit-area').classList.add('hidden');
         }
 
-        /* ABANDONED CART FUNCTIONS */
-        function toggleEditAbandoned() {
-             document.getElementById('abandoned-edit-area').classList.toggle('hidden');
-        }
+        /* ABANDONED CART FUNCTIONS - NEW FULL EDITOR FLOW */
+        function openAutomationEditor(type) {
+            if(type !== 'abandoned') return;
 
-        function toggleAbandoned() {
-            automationState.abandoned = !automationState.abandoned;
-            updateAbandonedCardUI();
-            saveAutomations();
+            // Switch directly to editor view
+            switchView('automation-editor');
+            
+            // Populate Data from State
+            const enabled = automationState.abandoned;
+            const badge = document.getElementById('editor-badge');
+            badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
+            badge.innerText = enabled ? 'Active' : 'Inactive';
+
+            // Load values (fallback to defaults)
+            const existingTitle = document.getElementById('autoAbandonedTitle').value;
+            const existingBody = document.getElementById('autoAbandonedMsg').value;
+            
+            document.getElementById('edit-auto-title').value = existingTitle || 'We saved your items!';
+            document.getElementById('edit-auto-msg').value = existingBody || 'Complete your purchase now before they sell out.';
+            document.getElementById('edit-auto-img').value = ''; 
+            
+            // Stats Sync
+             const card = document.getElementById('card-abandoned');
+            if(card) {
+                const stats = card.querySelectorAll('.stat-num');
+                if(stats.length >= 2) {
+                    document.getElementById('edit-stat-imp').innerText = stats[0].innerText;
+                    document.getElementById('edit-stat-clk').innerText = stats[1].innerText;
+                }
+            }
+
+            updateAutoPreview();
         }
 
         function updateAbandonedCardUI() {
@@ -1777,13 +1943,90 @@ app.get('/store-admin', async (req, res) => {
             if(txt) txt.innerText = enabled ? 'Abandoned notifications are activated.' : 'Abandoned notifications are deactivated.';
             
             const btn = document.getElementById('btn-toggle-abandoned');
-            if(btn) btn.innerText = enabled ? 'Deactivate' : 'Activate';
-            
-            const editBtn = document.getElementById('btn-edit-abandoned');
-            if(editBtn) {
-                if(enabled) editBtn.classList.remove('hidden'); else editBtn.classList.add('hidden');
+            if(btn) {
+                // Change Button to open Editor
+                btn.innerText = enabled ? 'Edit Settings' : 'Activate';
+                btn.className = 'btn-action';
+                btn.onclick = () => openAutomationEditor('abandoned'); 
             }
-            if(!enabled) document.getElementById('abandoned-edit-area').classList.add('hidden');
+            
+            // Hide the old inline edit button & area
+            const editBtn = document.getElementById('btn-edit-abandoned');
+            if(editBtn) editBtn.style.display = 'none'; 
+            document.getElementById('abandoned-edit-area').classList.add('hidden');
+        }
+
+        function updateAutoPreview() {
+            const title = document.getElementById('edit-auto-title').value;
+            const msg = document.getElementById('edit-auto-msg').value;
+            const img = document.getElementById('edit-auto-img').value;
+            const btn1 = document.getElementById('edit-auto-btn1').value || 'CHECKOUT';
+            const btn2 = document.getElementById('edit-auto-btn2').value || 'VIEW STORE';
+
+            // Android
+            document.getElementById('prev-auto-title').innerText = title || 'Title';
+            document.getElementById('prev-auto-msg').innerText = msg || 'Message...';
+            document.getElementById('prev-auto-b1').innerText = btn1.toUpperCase();
+            document.getElementById('prev-auto-b2').innerText = btn2.toUpperCase();
+            
+            const pHero = document.getElementById('prev-auto-hero');
+            if(img) { pHero.src = img; pHero.style.display = 'block'; } else { pHero.style.display = 'none'; }
+
+            // Windows
+            document.getElementById('prev-win-title').innerText = title || 'Title';
+            document.getElementById('prev-win-msg').innerText = msg || 'Message...';
+            const wHero = document.getElementById('prev-win-hero');
+             if(img) { wHero.src = img; wHero.style.display = 'block'; } else { wHero.style.display = 'none'; }
+        }
+
+        async function saveAutomationFull() {
+            // Save from Editor
+            const btn = document.querySelector('#view-automation-editor .btn-primary');
+            const originalText = btn.innerText;
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            const abandonedTitle = document.getElementById('edit-auto-title').value;
+            const abandonedBody = document.getElementById('edit-auto-msg').value;
+            
+            try {
+                // Commit to State
+                automationState.abandoned = true; 
+                document.getElementById('autoAbandonedTitle').value = abandonedTitle;
+                document.getElementById('autoAbandonedMsg').value = abandonedBody;
+
+                const res = await fetch('/my-store/update-automations', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        storeId: store.id, 
+                        welcomeEnabled: automationState.welcome, 
+                        welcomeTitle: document.getElementById('autoWelcomeTitle').value, 
+                        welcomeBody: document.getElementById('autoWelcomeMsg').value,
+                        abandonedEnabled: true,
+                        abandonedTitle,
+                        abandonedBody
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    btn.innerText = 'Saved!';
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        switchView('automations'); // Return to list
+                        updateAbandonedCardUI(); // Refresh UI
+                    }, 1000);
+                } else {
+                    alert('Error: ' + data.error);
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            } catch(e) {
+                alert('Connection Error');
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
 
         async function loadAutomations() {
