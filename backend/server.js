@@ -2697,6 +2697,7 @@ app.post('/api/track-event', async (req, res) => {
 /* CRON JOB for Scheduler & Abandoned Carts */
 app.get('/api/run-scheduler', async (req, res) => {
     try {
+        await initCheckoutsTable();
         const db = getPool();
         let processed = 0;
         let abandonedProcessed = 0;
