@@ -419,10 +419,17 @@ app.get('/store-admin', async (req, res) => {
                          sessionStorage.clear();
                          
                          // Set NEW Session
-                         localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
+                         try {
+                             localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
+                             console.log('Session Set');
+                         } catch(e) {
+                             document.body.innerHTML += '<p style="color:red">Storage Error: ' + e.message + '</p>';
+                         }
                          
-                         // Redirect
-                         window.location.href = '/store-admin';
+                         // Redirect with Delay to ensure storage commit
+                         setTimeout(function() {
+                             window.location.href = '/store-admin';
+                         }, 1000);
                      </script>
                      </body></html>
                  `);
@@ -2019,117 +2026,9 @@ app.get('/store-admin', async (req, res) => {
             config.image = document.getElementById('edit-auto-img').value;
             config.btn1 = document.getElementById('edit-auto-btn1').value;
             config.btn2 = document.getElementById('edit-auto-btn2').value;
-            
-           // alert("DEBUG: State Updated Step " + idx + " Delay: " + config.delay);
         }
 
-        async function saveAutomationFull() {
-            // Save current Step first
-            saveCurrentStepToState();
-
-            const btn = document.querySelector('#view-automation-editor .btn-primary');
-            const originalText = btn.innerText;
-            btn.innerText = 'Saving...';
-            btn.disabled = true;
-
-            const config = automationState.abandonedConfig;
-            
-           // alert("DEBUG: Sending Config to Backend: " + JSON.stringify(config));
-
-            // Use Reminder 1 for the main dashboard display fallback
-            const mainTitle = config[0].title;
-            const mainBody = config[0].body;
-            
-            try {
-                // Determine if overall enabled (if at least one reminder is ON)
-                const isAnyEnabled = config.some(c => c.enabled);
-                automationState.abandoned = isAnyEnabled;
-
-                const res = await fetch('/my-store/update-automations', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        storeId: store.id, 
-                        welcomeEnabled: automationState.welcome, 
-                        welcomeTitle: document.getElementById('autoWelcomeTitle').value, 
-                        welcomeBody: document.getElementById('autoWelcomeMsg').value,
-                        abandonedEnabled: isAnyEnabled,
-                        abandonedTitle: mainTitle,
-                        abandonedBody: mainBody,
-                        abandonedConfig: config // Send Full JSON
-                    })
-                });
-                const data = await res.json();
-                if(data.success) {
-                    btn.innerText = 'Saved!';
-                    setTimeout(() => {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                        switchView('automations'); // Return to list
-                        updateAbandonedCardUI(); // Refresh UI
-                    }, 1000);
-                } else {
-                    alert('Error: ' + data.error);
-                    btn.disabled = false;
-                    btn.innerText = originalText;
-                }
-            } catch(e) {
-                alert('Connection Error');
-                btn.disabled = false;
-                btn.innerText = originalText;
-            }
-        }
-
-        async function loadAutomations() {
-            const res = await fetch('/my-store/automations?storeId=' + store.id + '&v=' + Date.now());
-            const data = await res.json();
-            if(data.success && data.automations) {
-                // Welcome
-                automationState.welcome = data.automations.welcome_enabled;
-                document.getElementById('autoWelcomeTitle').value = data.automations.welcome_title || '';
-                document.getElementById('autoWelcomeMsg').value = data.automations.welcome_body || '';
-                
-                const wCard = document.getElementById('card-welcome');
-                if(wCard) {
-                    const stats = wCard.querySelectorAll('.stat-num');
-                    if(stats.length >= 2) {
-                        stats[0].innerText = data.automations.welcome_sent_count || 0;
-                        stats[1].innerText = data.automations.welcome_click_count || 0;
-                    }
-                }
-                updateWelcomeCardUI();
-
-                // Abandoned - Load Config
-                automationState.abandoned = data.automations.abandoned_enabled;
-                
-                if (data.automations.abandoned_config) {
-                    try {
-                        let parsed = data.automations.abandoned_config;
-                        // alert("DEBUG: DB Raw Config: " + parsed);
-
-                        if (typeof parsed === 'string') {
-                            parsed = JSON.parse(parsed);
-                        }
-                        if (typeof parsed === 'string') {
-                            parsed = JSON.parse(parsed);
-                        }
-                        
-                        if(parsed && Array.isArray(parsed)) {
-                            automationState.abandonedConfig = parsed;
-                            // Update Step 1 Meta immediately
-                            const step0 = parsed[0];
-                            if(step0) {
-                                document.getElementById('edit-delay-val').value = step0.delay;
-                                document.getElementById('edit-delay-unit').value = step0.unit;
-                                document.getElementById('edit-step-enabled').checked = step0.enabled;
-                                updateStepMeta();
-                                updateStepStatus();
-                            }
-                        }
-                    } catch(e) { 
-                        console.error('JSON Error', e);
-                    }
-                }
+        function updateFlowVisuals() {
             // Update the Left Sidebar Cards
             automationState.abandonedConfig.forEach((step, i) => {
                 const card = document.getElementById('step-card-' + i);
