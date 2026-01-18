@@ -1332,8 +1332,16 @@ app.get('/store-admin', async (req, res) => {
             
             // Show Selected
             document.getElementById('view-'+viewName).classList.remove('hidden');
-            let titles = {dashboard: 'Dashboard', campaign: 'Create Campaign', history: 'Campaign History', subscribers: 'Subscribers List', settings: 'Settings', automations: 'Automations'};
-            document.getElementById('pageTitle').innerText = titles[viewName];
+            let titles = {
+                dashboard: 'Dashboard', 
+                campaign: 'Create Campaign', 
+                history: 'Campaign History', 
+                subscribers: 'Subscribers List', 
+                settings: 'Settings', 
+                automations: 'Automations',
+                'automation-editor': 'Automation Editor'
+            };
+            document.getElementById('pageTitle').innerText = titles[viewName] || 'SmartPush';
 
             // Reset wizard state if switching to campaign view
             if(viewName === 'campaign') {
