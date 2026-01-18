@@ -1067,24 +1067,33 @@ app.get('/store-admin', async (req, res) => {
                         </div>
 
                         <!-- ABANDONED CART CARD -->
-                        <div class="auto-card" style="opacity: 0.8;">
+                        <div class="auto-card" id="card-abandoned">
                              <div class="auto-card-header">
                                 <div class="auto-icon"><i class="fas fa-shopping-cart"></i></div>
-                                <div>
+                                <div style="flex: 1;">
                                      <div style="display: flex; gap: 8px; align-items: center;">
                                         <h4>Abandoned cart recovery</h4>
-                                        <span class="badge badge-grey">Plus</span>
+                                        <span class="badge badge-inactive" id="badge-abandoned">Inactive</span>
                                      </div>
                                      <p class="auto-desc">Remind subscribers about items they left in their cart.</p>
+                                     <!-- Edit Area -->
+                                     <div id="abandoned-edit-area" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                                          <input type="text" id="autoAbandonedTitle" class="input-sm" placeholder="Title">
+                                          <textarea id="autoAbandonedMsg" class="input-sm" placeholder="Message" rows="3"></textarea>
+                                          <button class="btn btn-primary btn-sm" onclick="saveAutomations()">Save Text</button>
+                                     </div>
                                 </div>
                             </div>
                             <div class="auto-stats">
-                                <div><span class="stat-num">-</span><span class="stat-lbl">Impressions</span></div>
-                                <div><span class="stat-num">-</span><span class="stat-lbl">Clicks</span></div>
+                                <div><span class="stat-num">0</span><span class="stat-lbl">Impressions</span></div>
+                                <div><span class="stat-num">0</span><span class="stat-lbl">Clicks</span></div>
                             </div>
                             <div class="auto-card-footer">
-                                <div style="font-size: 13px; color: #666;">Upgrade to unlock this feature</div>
-                                <button class="btn-action" disabled>Unlock</button>
+                                <div id="abandoned-status-text" style="font-size: 13px; color: #666;">Abandoned notifications are deactivated.</div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                     <button class="btn-link hidden" id="btn-edit-abandoned" onclick="toggleEditAbandoned()">Edit</button>
+                                     <button class="btn-action" id="btn-toggle-abandoned" onclick="toggleAbandoned()">Activate</button>
+                                </div>
                             </div>
                         </div>
 
@@ -1713,14 +1722,14 @@ app.get('/store-admin', async (req, res) => {
             }
         }
         /* Automation Logic Updated */
-        let automationState = { welcome: false };
+        let automationState = { welcome: false, abandoned: false };
 
+        /* WELCOME FUNCTIONS */
         function toggleEditWelcome() {
              document.getElementById('welcome-edit-area').classList.toggle('hidden');
         }
 
         function toggleWelcome() {
-            // Flip State
             automationState.welcome = !automationState.welcome;
             updateWelcomeCardUI();
             saveAutomations();
@@ -1728,66 +1737,112 @@ app.get('/store-admin', async (req, res) => {
 
         function updateWelcomeCardUI() {
             const enabled = automationState.welcome;
-            // Badge
             const badge = document.getElementById('badge-welcome');
             if(badge) {
                 badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
                 badge.innerText = enabled ? 'Active' : 'Inactive';
             }
-            
-            // Footer Text
             const txt = document.getElementById('welcome-status-text');
             if(txt) txt.innerText = enabled ? 'Welcome notifications are activated.' : 'Welcome notifications are deactivated.';
             
-            // Toggle Button
             const btn = document.getElementById('btn-toggle-welcome');
             if(btn) btn.innerText = enabled ? 'Deactivate' : 'Activate';
             
-            // Edit Button Visibility
             const editBtn = document.getElementById('btn-edit-welcome');
             if(editBtn) {
                 if(enabled) editBtn.classList.remove('hidden'); else editBtn.classList.add('hidden');
             }
-            
-            // Hide edit area if disabled
-            if(!enabled) {
-                const area = document.getElementById('welcome-edit-area');
-                if(area) area.classList.add('hidden');
+            if(!enabled) document.getElementById('welcome-edit-area').classList.add('hidden');
+        }
+
+        /* ABANDONED CART FUNCTIONS */
+        function toggleEditAbandoned() {
+             document.getElementById('abandoned-edit-area').classList.toggle('hidden');
+        }
+
+        function toggleAbandoned() {
+            automationState.abandoned = !automationState.abandoned;
+            updateAbandonedCardUI();
+            saveAutomations();
+        }
+
+        function updateAbandonedCardUI() {
+            const enabled = automationState.abandoned;
+            const badge = document.getElementById('badge-abandoned');
+            if(badge) {
+                badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
+                badge.innerText = enabled ? 'Active' : 'Inactive';
             }
+            const txt = document.getElementById('abandoned-status-text');
+            if(txt) txt.innerText = enabled ? 'Abandoned notifications are activated.' : 'Abandoned notifications are deactivated.';
+            
+            const btn = document.getElementById('btn-toggle-abandoned');
+            if(btn) btn.innerText = enabled ? 'Deactivate' : 'Activate';
+            
+            const editBtn = document.getElementById('btn-edit-abandoned');
+            if(editBtn) {
+                if(enabled) editBtn.classList.remove('hidden'); else editBtn.classList.add('hidden');
+            }
+            if(!enabled) document.getElementById('abandoned-edit-area').classList.add('hidden');
         }
 
         async function loadAutomations() {
             const res = await fetch('/my-store/automations?storeId=' + store.id);
             const data = await res.json();
             if(data.success && data.automations) {
+                // Welcome
                 automationState.welcome = data.automations.welcome_enabled;
                 document.getElementById('autoWelcomeTitle').value = data.automations.welcome_title || '';
                 document.getElementById('autoWelcomeMsg').value = data.automations.welcome_body || '';
                 
-                // Populate Stats
-                const card = document.getElementById('card-welcome');
-                if(card) {
-                    const stats = card.querySelectorAll('.stat-num');
+                const wCard = document.getElementById('card-welcome');
+                if(wCard) {
+                    const stats = wCard.querySelectorAll('.stat-num');
                     if(stats.length >= 2) {
                         stats[0].innerText = data.automations.welcome_sent_count || 0;
                         stats[1].innerText = data.automations.welcome_click_count || 0;
                     }
                 }
-                
                 updateWelcomeCardUI();
+
+                // Abandoned
+                automationState.abandoned = data.automations.abandoned_enabled;
+                const abTitle = document.getElementById('autoAbandonedTitle');
+                if(abTitle) abTitle.value = data.automations.abandoned_title || '';
+                const abMsg = document.getElementById('autoAbandonedMsg');
+                if(abMsg) abMsg.value = data.automations.abandoned_body || '';
+
+                const aCard = document.getElementById('card-abandoned');
+                if(aCard) {
+                    const stats = aCard.querySelectorAll('.stat-num');
+                    if(stats.length >= 2) {
+                        stats[0].innerText = data.automations.abandoned_sent_count || 0;
+                        stats[1].innerText = data.automations.abandoned_click_count || 0;
+                    }
+                }
+                updateAbandonedCardUI();
             }
         }
 
         async function saveAutomations() {
-            const btn = document.querySelector('#welcome-edit-area button');
-            const originalText = btn ? btn.innerText : 'Save Text';
-            if(btn) {
-                btn.innerText = 'Saving...';
-                btn.disabled = true;
+            // Helper to show saving state on active edit button
+            let activeBtn = null;
+            if(!document.getElementById('welcome-edit-area').classList.contains('hidden')) {
+                 activeBtn = document.querySelector('#welcome-edit-area button');
+            } else if (!document.getElementById('abandoned-edit-area').classList.contains('hidden')) {
+                 activeBtn = document.querySelector('#abandoned-edit-area button');
+            }
+
+            const originalText = activeBtn ? activeBtn.innerText : 'Save Text';
+            if(activeBtn) {
+                activeBtn.innerText = 'Saving...';
+                activeBtn.disabled = true;
             }
 
             const welcomeTitle = document.getElementById('autoWelcomeTitle').value;
             const welcomeBody = document.getElementById('autoWelcomeMsg').value;
+            const abandonedTitle = document.getElementById('autoAbandonedTitle') ? document.getElementById('autoAbandonedTitle').value : '';
+            const abandonedBody = document.getElementById('autoAbandonedMsg') ? document.getElementById('autoAbandonedMsg').value : '';
             
             try {
                 const res = await fetch('/my-store/update-automations', {
@@ -1797,30 +1852,33 @@ app.get('/store-admin', async (req, res) => {
                         storeId: store.id, 
                         welcomeEnabled: automationState.welcome, 
                         welcomeTitle, 
-                        welcomeBody 
+                        welcomeBody,
+                        abandonedEnabled: automationState.abandoned,
+                        abandonedTitle,
+                        abandonedBody
                     })
                 });
                 const data = await res.json();
                 
-                if(btn) {
+                if(activeBtn) {
                     if(data.success) {
-                        btn.innerText = 'Saved!';
+                        activeBtn.innerText = 'Saved!';
                         setTimeout(() => {
-                            btn.innerText = originalText;
-                            btn.disabled = false;
+                            activeBtn.innerText = originalText;
+                            activeBtn.disabled = false;
                             // Auto Close
-                            document.getElementById('welcome-edit-area').classList.add('hidden');
+                            if(activeBtn.parentElement) activeBtn.parentElement.classList.add('hidden');
                         }, 1500);
                     } else {
                         alert('Error: ' + data.error);
-                        btn.innerText = originalText;
-                        btn.disabled = false;
+                        activeBtn.innerText = originalText;
+                        activeBtn.disabled = false;
                     }
                 }
             } catch(e) {
-                if(btn) {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
+                if(activeBtn) {
+                    activeBtn.innerText = originalText;
+                    activeBtn.disabled = false;
                 }
                 alert('Connection Error');
             }
@@ -2093,6 +2151,7 @@ app.post('/my-store/update-settings', async (req, res) => {
 });
 
 /* Automation API */
+/* Automation API */
 app.get('/my-store/automations', async (req, res) => {
     const { storeId } = req.query;
     try {
@@ -2104,7 +2163,14 @@ app.get('/my-store/automations', async (req, res) => {
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_sent_count INT DEFAULT 0`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS welcome_click_count INT DEFAULT 0`);
 
-        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, welcome_sent_count, welcome_click_count FROM stores WHERE store_id = $1', [storeId]);
+        // Abandoned Cart Columns
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_enabled BOOLEAN DEFAULT FALSE`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_title TEXT`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_body TEXT`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_sent_count INT DEFAULT 0`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_click_count INT DEFAULT 0`);
+
+        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, welcome_sent_count, welcome_click_count, abandoned_enabled, abandoned_title, abandoned_body, abandoned_sent_count, abandoned_click_count FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, automations: result.rows[0] });
         } else {
@@ -2114,11 +2180,15 @@ app.get('/my-store/automations', async (req, res) => {
 });
 
 app.post('/my-store/update-automations', async (req, res) => {
-    const { storeId, welcomeEnabled, welcomeTitle, welcomeBody } = req.body;
+    const { storeId, welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody } = req.body;
     try {
         const db = getPool();
-        await db.query('UPDATE stores SET welcome_enabled = $1, welcome_title = $2, welcome_body = $3 WHERE store_id = $4',
-            [welcomeEnabled, welcomeTitle, welcomeBody, storeId]);
+        await db.query(`
+            UPDATE stores SET 
+            welcome_enabled = $1, welcome_title = $2, welcome_body = $3,
+            abandoned_enabled = $4, abandoned_title = $5, abandoned_body = $6
+            WHERE store_id = $7`,
+            [welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody, storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
