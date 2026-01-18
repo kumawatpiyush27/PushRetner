@@ -2013,7 +2013,7 @@ app.get('/store-admin', async (req, res) => {
                 else card.classList.remove('active');
 
                 // Meta Info
-                meta.innerText = `Wait ${ step.delay } ${ step.unit }`;
+                meta.innerText = 'Wait ' + step.delay + ' ' + step.unit;
                 
                 // ON/OFF Badge
                 if(step.enabled) {
@@ -2035,7 +2035,7 @@ app.get('/store-admin', async (req, res) => {
             const val = document.getElementById('edit-delay-val').value;
             const unit = document.getElementById('edit-delay-unit').value;
             const meta = document.getElementById('step-meta-' + currentReminderIndex);
-            if(meta) meta.innerText = `Wait ${ val } ${ unit }`;
+            if(meta) meta.innerText = 'Wait ' + val + ' ' + unit;
         }
         
         function updateStepStatus() {
