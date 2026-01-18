@@ -85,11 +85,23 @@
             // Step 7: Send to backend WITH STORE INFO
             console.log('📡 Sending subscription to server with store info...');
 
+            // Fetch Cart Token (Added for Abandoned Cart)
+            let cartToken = null;
+            let customerId = '{{ customer.id }}';
+            try {
+                const cRes = await fetch('/cart.js');
+                const cData = await cRes.json();
+                cartToken = cData.token;
+                console.log('🛒 Cart Token:', cartToken);
+            } catch (e) { }
+
             const subscriptionData = {
                 ...subscription.toJSON(),
                 storeId: STORE_CONFIG.id,
                 storeName: STORE_CONFIG.name,
-                storeDomain: STORE_CONFIG.domain
+                storeDomain: STORE_CONFIG.domain,
+                cartToken: cartToken,
+                customerId: customerId
             };
 
             console.log('📤 Store Info:', {
