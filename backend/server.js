@@ -2995,6 +2995,19 @@ app.post('/api/super/delete-store', async (req, res) => {
     }
 });
 
+app.get('/api/debug-data', async (req, res) => {
+    try {
+        const db = getPool();
+        const checkouts = await db.query('SELECT * FROM abandoned_checkouts ORDER BY updated_at DESC LIMIT 5');
+        const subs = await db.query('SELECT endpoint, store_id, cart_token, customer_id, created_at FROM subscriptions ORDER BY created_at DESC LIMIT 5');
+        res.json({
+            checkouts: checkouts.rows,
+            subscriptions: subs.rows,
+            serverTime: new Date().toISOString()
+        });
+    } catch (e) { res.send(e.message); }
+});
+
 // Privacy Policy Page
 app.get('/privacy', (req, res) => {
     res.send(`
