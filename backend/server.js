@@ -1134,8 +1134,21 @@ app.get('/store-admin', async (req, res) => {
                 </div>
             </div>
 
-            <!-- AUTOMATION EDITOR (NEW FULL PAGE VIEW) -->
+            <!-- AUTOMATION EDITOR (MULTI-STEP FLOW) -->
             <div id="view-automation-editor" class="content-area hidden">
+                <style>
+                    .flow-column { display: flex; flex-direction: column; align-items: center; padding: 20px 10px; }
+                    .flow-step { width: 100%; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.2s; position: relative; }
+                    .flow-step:hover { border-color: #2563EB; box-shadow: 0 2px 5px rgba(37,99,235,0.1); }
+                    .flow-step.active { border-color: #2563EB; background: #eff6ff; border-left: 4px solid #2563EB; }
+                    .flow-step.trigger { background: #fffbeb; border-color: #fcd34d; cursor: default; }
+                    .flow-line { width: 2px; height: 20px; background: #e5e7eb; margin: 5px 0; }
+                    .step-lbl { font-weight: 600; font-size: 14px; color: #111; }
+                    .step-meta { font-size: 12px; color: #666; margin-top: 4px; }
+                    .step-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #eee; color: #666; }
+                    .step-badge.active { background: #dcfce7; color: #166534; }
+                </style>
+                
                 <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
                     <button class="btn-secondary" onclick="switchView('automations')"><i class="fas fa-arrow-left"></i> Back</button>
                     <h2 style="margin: 0;" id="editor-page-title">Abandoned Cart Recovery</h2>
@@ -1144,89 +1157,105 @@ app.get('/store-admin', async (req, res) => {
 
                 <!-- STATS BAR -->
                 <div class="card" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 20px; margin-bottom: 20px;">
-                    <div>
-                        <div class="stat-lbl">Impressions</div>
-                        <div class="stat-num" id="edit-stat-imp">0</div>
-                    </div>
-                    <div>
-                        <div class="stat-lbl">Clicks</div>
-                        <div class="stat-num" id="edit-stat-clk">0</div>
-                    </div>
-                    <div>
-                        <div class="stat-lbl">Carts Recovered</div>
-                        <div class="stat-num" id="edit-stat-rec">0</div>
-                    </div>
-                    <div>
-                        <div class="stat-lbl">Revenue</div>
-                        <div class="stat-num" id="edit-stat-rev">₹0</div>
-                    </div>
+                    <div><div class="stat-lbl">Impressions</div><div class="stat-num" id="edit-stat-imp">0</div></div>
+                    <div><div class="stat-lbl">Clicks</div><div class="stat-num" id="edit-stat-clk">0</div></div>
+                    <div><div class="stat-lbl">Revenue</div><div class="stat-num" id="edit-stat-rev">₹0</div></div>
+                    <div><div class="stat-lbl">Active Reminders</div><div class="stat-num" id="edit-stat-active">1/3</div></div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 400px; gap: 25px;">
+                <!-- 3 COLUMNS: FLOW | EDITOR | PREVIEW -->
+                <div style="display: grid; grid-template-columns: 260px 1fr 360px; gap: 20px; align-items: start;">
                     
-                    <!-- LEFT: SETTINGS -->
-                    <div>
+                    <!-- LEFT: FLOW BUILDER -->
+                    <div class="card flow-column">
+                         <div class="flow-step trigger">
+                             <div class="step-lbl"><i class="fas fa-shopping-cart"></i> Added to Cart</div>
+                             <div class="step-meta">Trigger Event</div>
+                         </div>
+                         <div class="flow-line"></div>
+                         
+                         <!-- Reminder 1 -->
+                         <div class="flow-step reminder active" id="step-card-0" onclick="selectReminder(0)">
+                             <div class="step-lbl">Reminder 1</div>
+                             <div class="step-meta" id="step-meta-0">Wait 20 Mins</div>
+                             <span class="step-badge active" id="step-badge-0">ON</span>
+                         </div>
+                         <div class="flow-line"></div>
+
+                         <!-- Reminder 2 -->
+                         <div class="flow-step reminder" id="step-card-1" onclick="selectReminder(1)">
+                             <div class="step-lbl">Reminder 2</div>
+                             <div class="step-meta" id="step-meta-1">Wait 10 Hours</div>
+                             <span class="step-badge" id="step-badge-1">OFF</span>
+                         </div>
+                         <div class="flow-line"></div>
+
+                         <!-- Reminder 3 -->
+                         <div class="flow-step reminder" id="step-card-2" onclick="selectReminder(2)">
+                             <div class="step-lbl">Reminder 3</div>
+                             <div class="step-meta" id="step-meta-2">Wait 24 Hours</div>
+                             <span class="step-badge" id="step-badge-2">OFF</span>
+                         </div>
+                    </div>
+
+                    <!-- MIDDLE: EDITOR FORM -->
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                            <h3 style="margin: 0;" id="editor-step-title">Edit Reminder 1</h3>
+                            
+                            <label class="toggle-switch" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <span style="font-size: 13px; font-weight: 500;">Enable Step</span>
+                                <input type="checkbox" id="edit-step-enabled" onchange="updateStepStatus()">
+                            </label>
+                        </div>
+                        
                         <!-- TIMING SETTINGS -->
-                        <div class="card" style="margin-bottom: 20px;">
-                            <h3 style="display: flex; align-items: center; gap: 10px; margin-top: 0;">
-                                <i class="fas fa-clock" style="color: #666;"></i> Timing
-                            </h3>
-                            <div style="display: flex; gap: 10px; align-items: center; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px;">
+                            <div style="font-weight: 600; font-size: 13px; margin-bottom: 10px; color: #444;">WAIT TIME</div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
                                 <span>Wait for</span>
-                                <input type="number" id="edit-delay-val" value="20" style="width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <select id="edit-delay-unit" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="edit-delay-val" value="20" class="input-sm" style="width: 70px;" oninput="updateStepMeta()">
+                                <select id="edit-delay-unit" class="input-sm" style="width: 100px;" onchange="updateStepMeta()">
                                     <option value="minutes">Minutes</option>
                                     <option value="hours">Hours</option>
                                     <option value="days">Days</option>
                                 </select>
-                                <span>after cart is abandoned.</span>
                             </div>
                         </div>
 
                         <!-- CONTENT SETTINGS -->
-                        <div class="card">
-                            <h3 style="margin-top: 0;">Notification Content</h3>
-                            
-                            <div class="form-group">
-                                <label>Title</label>
-                                <input type="text" id="edit-auto-title" placeholder="We saved your items!" oninput="updateAutoPreview()">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Message</label>
-                                <textarea id="edit-auto-msg" rows="3" placeholder="Return to cart..." oninput="updateAutoPreview()"></textarea>
-                            </div>
+                        <div class="form-group">
+                            <label>Notification Title</label>
+                            <input type="text" id="edit-auto-title" placeholder="We saved your items!" oninput="updateAutoPreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Message Body</label>
+                            <textarea id="edit-auto-msg" rows="3" placeholder="Return to cart..." oninput="updateAutoPreview()"></textarea>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Primary Link</label>
-                                <input type="text" id="edit-auto-link" value="{checkout_url}" disabled style="background: #f4f4f4; color: #666;">
-                                <p style="font-size: 12px; color: #666; margin-top: 5px;">Linked to subscriber's abandoned checkout automatically.</p>
-                            </div>
+                        <div class="form-group">
+                            <label>Hero Image URL (Optional)</label>
+                            <input type="text" id="edit-auto-img" placeholder="https://..." oninput="updateAutoPreview()">
+                        </div>
 
-                            <div class="form-group">
-                                <label>Hero Image URL</label>
-                                <input type="text" id="edit-auto-img" placeholder="https://..." oninput="updateAutoPreview()">
-                            </div>
-
-                            <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-                                <h4 style="margin: 0 0 15px 0;">Action Buttons</h4>
-                                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
-                                    <div>
-                                        <label style="font-size: 13px; font-weight: 500;">Button 1 Text</label>
-                                        <input type="text" id="edit-auto-btn1" placeholder="Checkout" oninput="updateAutoPreview()">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 13px; font-weight: 500;">Button 2 Text</label>
-                                        <input type="text" id="edit-auto-btn2" placeholder="View Store" oninput="updateAutoPreview()">
-                                    </div>
+                        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                            <h4 style="margin: 0 0 15px 0;">Action Buttons</h4>
+                            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label style="font-size: 13px; font-weight: 500;">Button 1</label>
+                                    <input type="text" id="edit-auto-btn1" placeholder="Checkout" oninput="updateAutoPreview()">
+                                </div>
+                                <div>
+                                    <label style="font-size: 13px; font-weight: 500;">Button 2</label>
+                                    <input type="text" id="edit-auto-btn2" placeholder="View Store" oninput="updateAutoPreview()">
                                 </div>
                             </div>
                         </div>
 
                         <!-- ACTIONS FOOTER -->
-                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="btn-secondary" onclick="switchView('automations')">Cancel</button>
-                            <button class="btn-primary" onclick="saveAutomationFull()">Save & Activate</button>
+                        <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 20px;">
+                            <button class="btn-primary" style="width: 100%;" onclick="saveAutomationFull()">Save All & Activate</button>
                         </div>
                     </div>
 
@@ -1872,7 +1901,17 @@ app.get('/store-admin', async (req, res) => {
             }
         }
         /* Automation Logic Updated */
-        let automationState = { welcome: false, abandoned: false };
+        let automationState = { 
+            welcome: false, 
+            abandoned: false,
+            // Default 3-step config
+            abandonedConfig: [
+                { id: 0, delay: 20, unit: 'minutes', title: 'We saved your items!', body: 'Complete your purchase now.', enabled: true, btn1: 'Checkout', btn2: 'View Store' },
+                { id: 1, delay: 10, unit: 'hours', title: 'Still thinking about it?', body: 'Your cart is waiting for you.', enabled: false, btn1: 'Checkout', btn2: 'View Store'  },
+                { id: 2, delay: 1, unit: 'days', title: 'Last chance!', body: 'Your cart will expire soon.', enabled: false, btn1: 'Checkout', btn2: 'View Store'  }
+            ]
+        };
+        let currentReminderIndex = 0;
 
         /* WELCOME FUNCTIONS */
         function toggleEditWelcome() {
@@ -1905,62 +1944,111 @@ app.get('/store-admin', async (req, res) => {
             if(!enabled) document.getElementById('welcome-edit-area').classList.add('hidden');
         }
 
-        /* ABANDONED CART FUNCTIONS - NEW FULL EDITOR FLOW */
+        /* ABANDONED CART FUNCTIONS - MULTI STEP FLOW */
         function openAutomationEditor(type) {
             if(type !== 'abandoned') return;
-
-            // Switch directly to editor view
             switchView('automation-editor');
             
-            // Populate Data from State
+            // Sync Top Status
             const enabled = automationState.abandoned;
             const badge = document.getElementById('editor-badge');
             badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
             badge.innerText = enabled ? 'Active' : 'Inactive';
-
-            // Load values (fallback to defaults)
-            const existingTitle = document.getElementById('autoAbandonedTitle').value;
-            const existingBody = document.getElementById('autoAbandonedMsg').value;
             
-            document.getElementById('edit-auto-title').value = existingTitle || 'We saved your items!';
-            document.getElementById('edit-auto-msg').value = existingBody || 'Complete your purchase now before they sell out.';
-            document.getElementById('edit-auto-img').value = ''; 
-            
-            // Stats Sync
-             const card = document.getElementById('card-abandoned');
-            if(card) {
-                const stats = card.querySelectorAll('.stat-num');
-                if(stats.length >= 2) {
-                    document.getElementById('edit-stat-imp').innerText = stats[0].innerText;
-                    document.getElementById('edit-stat-clk').innerText = stats[1].innerText;
-                }
-            }
+            // Select First Reminder by Default
+            selectReminder(0);
+            updateFlowVisuals();
+        }
 
+        function selectReminder(index) {
+            // 1. Save changes from current index before switching (if we were editing one)
+            saveCurrentStepToState();
+
+            // 2. Switch Index
+            currentReminderIndex = index;
+
+            // 3. Load Data for new Index
+            const data = automationState.abandonedConfig[index];
+            
+            document.getElementById('editor-step-title').innerText = 'Edit Reminder ' + (index + 1);
+            
+            document.getElementById('edit-delay-val').value = data.delay;
+            document.getElementById('edit-delay-unit').value = data.unit;
+            document.getElementById('edit-step-enabled').checked = data.enabled;
+            
+            document.getElementById('edit-auto-title').value = data.title;
+            document.getElementById('edit-auto-msg').value = data.body;
+            document.getElementById('edit-auto-img').value = data.image || '';
+            document.getElementById('edit-auto-btn1').value = data.btn1 || 'Checkout';
+            document.getElementById('edit-auto-btn2').value = data.btn2 || 'View Store';
+
+            // 4. Update UI
+            updateFlowVisuals();
             updateAutoPreview();
         }
 
-        function updateAbandonedCardUI() {
-            const enabled = automationState.abandoned;
-            const badge = document.getElementById('badge-abandoned');
-            if(badge) {
-                badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
-                badge.innerText = enabled ? 'Active' : 'Inactive';
-            }
-            const txt = document.getElementById('abandoned-status-text');
-            if(txt) txt.innerText = enabled ? 'Abandoned notifications are activated.' : 'Abandoned notifications are deactivated.';
+        function saveCurrentStepToState() {
+            const idx = currentReminderIndex;
+            const config = automationState.abandonedConfig[idx];
             
-            const btn = document.getElementById('btn-toggle-abandoned');
-            if(btn) {
-                // Change Button to open Editor
-                btn.innerText = enabled ? 'Edit Settings' : 'Activate';
-                btn.className = 'btn-action';
-                btn.onclick = () => openAutomationEditor('abandoned'); 
-            }
+            config.delay = document.getElementById('edit-delay-val').value;
+            config.unit = document.getElementById('edit-delay-unit').value;
+            config.enabled = document.getElementById('edit-step-enabled').checked;
+            config.title = document.getElementById('edit-auto-title').value;
+            config.body = document.getElementById('edit-auto-msg').value;
+            config.image = document.getElementById('edit-auto-img').value;
+            config.btn1 = document.getElementById('edit-auto-btn1').value;
+            config.btn2 = document.getElementById('edit-auto-btn2').value;
+        }
+
+        function updateFlowVisuals() {
+            // Update the Left Sidebar Cards
+            automationState.abandonedConfig.forEach((step, i) => {
+                const card = document.getElementById('step-card-' + i);
+                const meta = document.getElementById('step-meta-' + i);
+                const badge = document.getElementById('step-badge-' + i);
+                
+                // Active Selection
+                if(i === currentReminderIndex) card.classList.add('active');
+                else card.classList.remove('active');
+
+                // Meta Info
+                meta.innerText = `Wait ${ step.delay } ${ step.unit }`;
+                
+                // ON/OFF Badge
+                if(step.enabled) {
+                    badge.classList.add('active');
+                    badge.innerText = 'ON';
+                } else {
+                    badge.classList.remove('active');
+                    badge.innerText = 'OFF';
+                }
+            });
             
-            // Hide the old inline edit button & area
-            const editBtn = document.getElementById('btn-edit-abandoned');
-            if(editBtn) editBtn.style.display = 'none'; 
-            document.getElementById('abandoned-edit-area').classList.add('hidden');
+            // Update Header Stats
+            const activeCount = automationState.abandonedConfig.filter(s => s.enabled).length;
+            document.getElementById('edit-stat-active').innerText = activeCount + '/3';
+        }
+
+        // Called when inputs change
+        function updateStepMeta() {
+            const val = document.getElementById('edit-delay-val').value;
+            const unit = document.getElementById('edit-delay-unit').value;
+            const meta = document.getElementById('step-meta-' + currentReminderIndex);
+            if(meta) meta.innerText = `Wait ${ val } ${ unit }`;
+        }
+        
+        function updateStepStatus() {
+            const enabled = document.getElementById('edit-step-enabled').checked;
+            const badge = document.getElementById('step-badge-' + currentReminderIndex);
+            if(enabled) {
+                badge.classList.add('active');
+                badge.innerText = 'ON';
+            } else {
+                badge.classList.remove('active');
+                badge.innerText = 'OFF';
+            }
+            updateFlowVisuals(); // Update counts
         }
 
         function updateAutoPreview() {
@@ -1986,21 +2074,45 @@ app.get('/store-admin', async (req, res) => {
              if(img) { wHero.src = img; wHero.style.display = 'block'; } else { wHero.style.display = 'none'; }
         }
 
+        function updateAbandonedCardUI() {
+            const enabled = automationState.abandoned;
+            const badge = document.getElementById('badge-abandoned');
+            if(badge) {
+                badge.className = enabled ? 'badge badge-active' : 'badge badge-inactive';
+                badge.innerText = enabled ? 'Active' : 'Inactive';
+            }
+            const txt = document.getElementById('abandoned-status-text');
+            if(txt) txt.innerText = enabled ? 'Abandoned notifications are activated.' : 'Abandoned notifications are deactivated.';
+            
+            const btn = document.getElementById('btn-toggle-abandoned');
+            if(btn) {
+                btn.innerText = enabled ? 'Edit Settings' : 'Activate';
+                btn.className = 'btn-action';
+                btn.onclick = () => openAutomationEditor('abandoned'); 
+            }
+            const editBtn = document.getElementById('btn-edit-abandoned');
+            if(editBtn) editBtn.style.display = 'none'; 
+            document.getElementById('abandoned-edit-area').classList.add('hidden');
+        }
+
         async function saveAutomationFull() {
-            // Save from Editor
+            // Save current Step first
+            saveCurrentStepToState();
+
             const btn = document.querySelector('#view-automation-editor .btn-primary');
             const originalText = btn.innerText;
             btn.innerText = 'Saving...';
             btn.disabled = true;
 
-            const abandonedTitle = document.getElementById('edit-auto-title').value;
-            const abandonedBody = document.getElementById('edit-auto-msg').value;
+            const config = automationState.abandonedConfig;
+            // Use Reminder 1 for the main dashboard display fallback
+            const mainTitle = config[0].title;
+            const mainBody = config[0].body;
             
             try {
-                // Commit to State
-                automationState.abandoned = true; 
-                document.getElementById('autoAbandonedTitle').value = abandonedTitle;
-                document.getElementById('autoAbandonedMsg').value = abandonedBody;
+                // Determine if overall enabled (if at least one reminder is ON)
+                const isAnyEnabled = config.some(c => c.enabled);
+                automationState.abandoned = isAnyEnabled;
 
                 const res = await fetch('/my-store/update-automations', {
                     method: 'POST',
@@ -2010,9 +2122,10 @@ app.get('/store-admin', async (req, res) => {
                         welcomeEnabled: automationState.welcome, 
                         welcomeTitle: document.getElementById('autoWelcomeTitle').value, 
                         welcomeBody: document.getElementById('autoWelcomeMsg').value,
-                        abandonedEnabled: true,
-                        abandonedTitle,
-                        abandonedBody
+                        abandonedEnabled: isAnyEnabled,
+                        abandonedTitle: mainTitle,
+                        abandonedBody: mainBody,
+                        abandonedConfig: config // Send Full JSON
                     })
                 });
                 const data = await res.json();
@@ -2055,8 +2168,27 @@ app.get('/store-admin', async (req, res) => {
                 }
                 updateWelcomeCardUI();
 
-                // Abandoned
+                // Abandoned - Load Config
                 automationState.abandoned = data.automations.abandoned_enabled;
+                
+                if (data.automations.abandoned_config) {
+                    try {
+                        let parsed = JSON.parse(data.automations.abandoned_config);
+                        if(parsed && Array.isArray(parsed)) {
+                            automationState.abandonedConfig = parsed;
+                        }
+                    } catch(e) { console.error('JSON Error', e); }
+                } else {
+                    // Backwards Compatibility: Migration
+                    // If we have old title/body but no config, map it to Reminder 1
+                    if(data.automations.abandoned_title) {
+                         automationState.abandonedConfig[0].title = data.automations.abandoned_title;
+                         automationState.abandonedConfig[0].body = data.automations.abandoned_body;
+                         automationState.abandonedConfig[0].enabled = data.automations.abandoned_enabled;
+                    }
+                }
+
+                // Update UI elements for legacy cards (if visible)
                 const abTitle = document.getElementById('autoAbandonedTitle');
                 if(abTitle) abTitle.value = data.automations.abandoned_title || '';
                 const abMsg = document.getElementById('autoAbandonedMsg');
@@ -2417,10 +2549,11 @@ app.get('/my-store/automations', async (req, res) => {
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_enabled BOOLEAN DEFAULT FALSE`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_title TEXT`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_body TEXT`);
+        await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_config TEXT`); // JSON for 3 reminders
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_sent_count INT DEFAULT 0`);
         await db.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS abandoned_click_count INT DEFAULT 0`);
 
-        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, welcome_sent_count, welcome_click_count, abandoned_enabled, abandoned_title, abandoned_body, abandoned_sent_count, abandoned_click_count FROM stores WHERE store_id = $1', [storeId]);
+        const result = await db.query('SELECT welcome_enabled, welcome_title, welcome_body, welcome_sent_count, welcome_click_count, abandoned_enabled, abandoned_title, abandoned_body, abandoned_config, abandoned_sent_count, abandoned_click_count FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, automations: result.rows[0] });
         } else {
@@ -2430,15 +2563,18 @@ app.get('/my-store/automations', async (req, res) => {
 });
 
 app.post('/my-store/update-automations', async (req, res) => {
-    const { storeId, welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody } = req.body;
+    const { storeId, welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody, abandonedConfig } = req.body;
     try {
         const db = getPool();
         await db.query(`
             UPDATE stores SET 
             welcome_enabled = $1, welcome_title = $2, welcome_body = $3,
-            abandoned_enabled = $4, abandoned_title = $5, abandoned_body = $6
-            WHERE store_id = $7`,
-            [welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody, storeId]);
+            abandoned_enabled = $4, abandoned_title = $5, abandoned_body = $6,
+            abandoned_config = $7
+            WHERE store_id = $8`,
+            [welcomeEnabled, welcomeTitle, welcomeBody, abandonedEnabled, abandonedTitle, abandonedBody,
+                abandonedConfig ? JSON.stringify(abandonedConfig) : null,
+                storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
