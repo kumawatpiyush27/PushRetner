@@ -3000,9 +3000,11 @@ app.get('/api/debug-data', async (req, res) => {
         const db = getPool();
         const checkouts = await db.query('SELECT * FROM abandoned_checkouts ORDER BY updated_at DESC LIMIT 5');
         const subs = await db.query('SELECT endpoint, store_id, cart_token, customer_id, created_at FROM subscriptions ORDER BY created_at DESC LIMIT 5');
+        const stores = await db.query('SELECT store_id, abandoned_enabled, abandoned_config FROM stores');
         res.json({
             checkouts: checkouts.rows,
             subscriptions: subs.rows,
+            stores: stores.rows,
             serverTime: new Date().toISOString()
         });
     } catch (e) { res.send(e.message); }
