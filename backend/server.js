@@ -380,7 +380,7 @@ app.get('/store-admin', async (req, res) => {
     // SSO Handling: Check for Token from Shopify App
     if (req.query.sso_token) {
         try {
-            const secret = process.env.SSO_SECRET || process.env.SHOPIFY_API_SECRET;
+            const secret = 'retner_sso_final_2025';
             // Only verify if secret is available
             if (secret) {
                 const decoded = jwt.verify(req.query.sso_token, secret);
