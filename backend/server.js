@@ -51,7 +51,7 @@ const initCampaignTable = async () => {
             image TEXT,
             sent_count INTEGER,
             clicks INTEGER DEFAULT 0,
-            revenue DECIMAL(10,2) DEFAULT 0.00,
+            revenue DECIMAL(10,2) DEFAULT 0.00
         );
     `;
     try {
@@ -154,8 +154,6 @@ app.get('/sw.js', (req, res) => {
                     }
                 })
             );
-        });
-            
             // Default URL (Clicking body)
             let openUrl = event.notification.data.url;
 
@@ -210,23 +208,38 @@ app.post('/webhooks/shopify/data/customer', verifyShopifyWebhook, (req, res) => 
 
 // 2. Track Revenue (Shopify Webhook)
 app.post('/webhooks/shopify/order', verifyShopifyWebhook, async (req, res) => {
+    console.log('Webhook Received: Order Create (Verified)');
     try {
-        const order = req.body;
-        // Check landing site for UTM
-        // landing_site: "https://my-store.com/products/xyz?utm_source=push-retner&utm_medium=push&utm_campaign=push_camp_123"
-        const landingSite = order.landing_site || order.landing_site_ref;
+        const { id, total_price, landing_site, landing_site_ref } = req.body;
 
-        if (landingSite && landingSite.includes('utm_campaign=push_camp_')) {
-            const match = landingSite.match(/push_camp_(\d+)/);
-            if (match && match[1]) {
-                const campId = match[1];
-                const value = parseFloat(order.total_price);
+        // 1. Identify Campaign
+        let campaignId = null;
+        const urlToCheck = landing_site || landing_site_ref || '';
+        const match = urlToCheck.match(/push_camp_(\d+)/);
 
-                await getPool().query('UPDATE campaigns SET revenue = revenue + $1 WHERE id = $2', [value, campId]);
-                console.log(`💰 Revenue attributed! Campaign ${campId} + $${value}`);
+        if (match && match[1]) {
+            campaignId = parseInt(match[1]);
+            console.log(`💰 Attributing Order ${id} to Campaign ${campaignId}. Value: ${total_price}`);
+
+            const db = getPool();
+            // Update Revenue (Add to existing)
+            await db.query('UPDATE campaigns SET revenue = revenue + $1 WHERE id = $2', [parseFloat(total_price || 0), campaignId]);
+
+            // 2. TAG ORDER on Shopify (Via Remix App)
+            const shopDomain = req.headers['x-shopify-shop-domain'];
+
+            if (shopDomain) {
+                // Call Remix App Internal API to Tag
+                fetch('https://retner-smart-push.vercel.app/api/mark-push-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shop: shopDomain, orderId: id })
+                }).catch(err => console.error('Tagging Call Failed:', err.message));
             }
+        } else {
+            console.log('No Push Attribution found for Order', id);
         }
-        res.status(200).send('Webhook Received');
+        res.status(200).send('OK');
     } catch (e) {
         console.error('Webhook Error', e);
         res.status(500).send('Error');
@@ -2379,50 +2392,6 @@ app.get('/my-store/subscribers', async (req, res) => {
 
 
 /* -------------------------------------------------------------------------- */
-/*                     SHOPIFY ORDER WEBHOOK (Existing)                       */
-/* -------------------------------------------------------------------------- */
-
-/* Shopify Webhook for Revenue Tracking */
-app.post('/webhooks/shopify/order', async (req, res) => {
-    console.log('Webhook Received: Order Create');
-    const { id, total_price, landing_site, landing_site_ref } = req.body;
-
-    // 1. Identify Campaign
-    let campaignId = null;
-    const urlToCheck = landing_site || landing_site_ref || '';
-    const match = urlToCheck.match(/push_camp_(\d+)/);
-
-    if (match && match[1]) {
-        campaignId = parseInt(match[1]);
-        console.log(`Attributing Order ${id} to Campaign ${campaignId}. Value: ${total_price}`);
-
-        try {
-            const db = getPool();
-            // Update Revenue (Add to existing)
-            await db.query('UPDATE campaigns SET revenue = revenue + $1 WHERE id = $2', [parseFloat(total_price || 0), campaignId]);
-
-            // 2. TAG ORDER on Shopify (Via Remix App)
-            const shopDomain = req.headers['x-shopify-shop-domain'];
-
-            if (shopDomain) {
-                // Call Remix App Internal API to Tag
-                // We use fire-and-forget fetch to avoid blocking webhook response
-                fetch('https://retner-smart-push.vercel.app/api/mark-push-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shop: shopDomain, orderId: id })
-                }).catch(err => console.error('Tagging Call Failed:', err.message));
-            }
-
-        } catch (e) { console.error('Revenue Update Error', e); }
-    } else {
-        console.log('No Push Attribution found for Order', id);
-    }
-
-    res.status(200).send('OK');
-});
-
-/* -------------------------------------------------------------------------- */
 /*                     ABANDONED CART WEBHOOK (New)                           */
 /* -------------------------------------------------------------------------- */
 app.post('/webhooks/shopify/checkouts', async (req, res) => {
@@ -2439,7 +2408,7 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
         // Note: This relies on at least one subscriber having visited from this domain.
         // A better way is to query the 'stores' table if it has domains, but currently it seems sparse.
         // We fallback to subscriptions lookup.
-        const subRes = await db.query('SELECT store_id FROM subscriptions WHERE domain = $1 LIMIT 1', [shopDomain]);
+        const subRes = await db.query('SELECT store_id FROM subscriptions WHERE store_domain = $1 LIMIT 1', [shopDomain]);
 
         if (subRes.rows.length === 0) {
             // Try to fuzzy match from stores table just in case
@@ -2538,9 +2507,8 @@ app.post('/my-store/broadcast', async (req, res) => {
         const options = {
             vapidDetails: {
                 subject: finalSubject,
-                // Hardcoded New Keys (Rotated)
-                publicKey: 'BJHfoHdkqKd_1TBdswVMLIR7bhhPoT1LvYLHfgXPo8Vxiy5co7fTCyr_rGv2eL-QV1bivLTw3kwo8Yhtmu2ioEE',
-                privateKey: '7Tkx8ZMeTs-OnEXXtYzSHYAQIDnB6XiUpHBXSX_xHZk',
+                publicKey: process.env.PUBLIC_KEY,
+                privateKey: process.env.PRIVATE_KEY,
             }
         };
 
