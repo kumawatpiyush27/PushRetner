@@ -1,0 +1,4 @@
+api_version = "2024-04"
+name = "Retner Widget"
+handle = "retner-widget"
+type = "theme"

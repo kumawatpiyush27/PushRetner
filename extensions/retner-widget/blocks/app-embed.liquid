@@ -1,0 +1,66 @@
+{% schema %}
+{
+  "name": "Retner Widget",
+  "target": "body",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_spin_wheel",
+      "label": "Enable Spin Wheel",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
+
+{% if block.settings.enable_spin_wheel %}
+  <script data-retner-loader>
+    (function() {
+      var shop = "{{ shop.permanent_domain }}";
+      var apiBase = "https://trustees-largely-kyle-designed.trycloudflare.com";
+
+      // 1. Fetch active tool config to get tool IDs for this shop
+      fetch(apiBase + "/api/lead-capture/widget/config?shop=" + shop)
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data || !data.tools || data.tools.length === 0) return;
+
+          var tools = data.tools;
+          var migration = data.themeMigrationWarning;
+
+          // 2. Warn merchant in console if on a vintage/Asset injection theme
+          if (migration) {
+            console.warn("[Retner] Your theme uses legacy Asset API injection. Please migrate to a modern theme and our App Embed.");
+          }
+
+          // 3. Check trigger conditions for the first live tool
+          var tool = tools[0];
+          var params = new URLSearchParams({
+            device: /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
+            currentUrl: window.location.href
+          });
+
+          fetch(apiBase + "/api/lead-capture/" + tool._id + "/check-trigger?" + params.toString())
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(trigger) {
+              if (!trigger || !trigger.shouldShow) return;
+
+              // 4. Trigger conditions met — lazy-inject the main wheel bundle
+              var script = document.createElement("script");
+              script.src = apiBase + "/widget.js";
+              script.setAttribute("data-shop", shop);
+              script.setAttribute("data-tool-id", tool._id);
+              script.setAttribute("data-api-base", apiBase);
+              script.async = true;
+              document.body.appendChild(script);
+            })
+            .catch(function(e) {
+              console.error("[Retner] Trigger check failed:", e);
+            });
+        })
+        .catch(function(e) {
+          console.error("[Retner] Widget config fetch failed:", e);
+        });
+    })();
+  </script>
+{% endif %}
