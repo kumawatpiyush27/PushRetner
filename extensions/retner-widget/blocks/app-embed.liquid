@@ -20,7 +20,9 @@
       var apiBase = "https://edgar-pseudoaggressive-conception.ngrok-free.dev"; 
 
       // 1. Fetch active tool config to get tool IDs for this shop
-      fetch(apiBase + "/api/lead-capture/widget/config?shop=" + shop)
+      fetch(apiBase + "/api/lead-capture/widget/config?shop=" + shop, {
+        headers: { "ngrok-skip-browser-warning": "69420" }
+      })
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(data) {
           if (!data || !data.tools || data.tools.length === 0) return;
@@ -40,7 +42,9 @@
             currentUrl: window.location.href
           });
 
-          fetch(apiBase + "/api/lead-capture/" + tool._id + "/check-trigger?" + params.toString())
+          fetch(apiBase + "/api/lead-capture/" + tool._id + "/check-trigger?" + params.toString(), {
+            headers: { "ngrok-skip-browser-warning": "69420" }
+          })
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(trigger) {
               if (!trigger || !trigger.shouldShow) return;
