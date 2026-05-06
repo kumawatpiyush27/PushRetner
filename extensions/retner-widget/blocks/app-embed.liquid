@@ -16,14 +16,12 @@
 {% if block.settings.enable_spin_wheel %}
   <script data-retner-loader>
     (function () {
-      // Retner Spin Wheel Loader - Updated for ngrok testing
+      // Retner Spin Wheel Loader - Production
       var shop = '{{ shop.permanent_domain }}';
-      var apiBase = 'https://edgar-pseudoaggressive-conception.ngrok-free.dev';
+      var apiBase = 'https://push-retner.vercel.app';
 
       // 1. Fetch active tool config to get tool IDs for this shop
-      fetch(apiBase + '/api/lead-capture/widget/config?shop=' + shop, {
-        headers: { 'ngrok-skip-browser-warning': '69420' },
-      })
+      fetch(apiBase + '/api/lead-capture/widget/config?shop=' + shop)
         .then(function (r) {
           return r.ok ? r.json() : null;
         })
@@ -47,9 +45,7 @@
             currentUrl: window.location.href,
           });
 
-          fetch(apiBase + '/api/lead-capture/' + tool._id + '/check-trigger?' + params.toString(), {
-            headers: { 'ngrok-skip-browser-warning': '69420' },
-          })
+          fetch(apiBase + '/api/lead-capture/' + tool._id + '/check-trigger?' + params.toString())
             .then(function (r) {
               return r.ok ? r.json() : null;
             })
