@@ -5,7 +5,7 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [subscribers, setSubscribers] = useState(0);
     const [campaigns, setCampaigns] = useState(0);
-    const [successRate, setSuccessRate] = useState('100%');
+    const [successRate] = useState('100%');
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedIcon, setSelectedIcon] = useState('');
     const [buttons, setButtons] = useState([]);
