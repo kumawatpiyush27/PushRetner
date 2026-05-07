@@ -1,0 +1,922 @@
+﻿{
+  "idEnvironmentVariableName": "SHOPIFY_API_KEY",
+  "name": "retner-smart-push",
+  "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+  "configPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+  "configuration": {
+    "client_id": "f30492469a636d7f010fe6e905ddc2b5",
+    "build": {
+      "automatically_update_urls_on_dev": true
+    },
+    "name": "Retner Smart Push",
+    "webhooks": {
+      "api_version": "2024-01",
+      "subscriptions": [
+        {
+          "topics": [
+            "app/uninstalled"
+          ],
+          "uri": "/api/webhooks"
+        }
+      ]
+    },
+    "access_scopes": {
+      "scopes": "read_customers,read_discounts,read_products,write_customers,write_discounts"
+    },
+    "auth": {
+      "redirect_urls": [
+        "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/callback",
+        "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/shopify/callback",
+        "https://edgar-pseudoaggressive-conception.ngrok-free.dev/api/auth/callback"
+      ]
+    },
+    "application_url": "https://edgar-pseudoaggressive-conception.ngrok-free.dev",
+    "embedded": true,
+    "handle": "retner-smart-push"
+  },
+  "webs": [],
+  "realExtensions": [
+    {
+      "configuration": {
+        "name": "Retner Widget",
+        "type": "theme",
+        "handle": "retner-widget"
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget/shopify.extension.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget",
+      "specification": {
+        "externalIdentifier": "theme_app_extension",
+        "additionalIdentifiers": [],
+        "externalName": "Online Store - App Theme Extension",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "theme_app_extension",
+        "registrationLimit": 1,
+        "experience": "extension",
+        "uidStrategy": "uuid",
+        "clientSteps": [
+          {
+            "lifecycle": "deploy",
+            "steps": [
+              {
+                "id": "build-theme",
+                "name": "Build Theme Extension",
+                "type": "build_theme",
+                "config": {}
+              },
+              {
+                "id": "bundle-theme",
+                "name": "Bundle Theme Extension",
+                "type": "bundle_theme",
+                "config": {}
+              }
+            ]
+          }
+        ],
+        "identifier": "theme",
+        "graphQLType": "theme_app_extension",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "retner-widget",
+      "localIdentifier": "retner-widget",
+      "idEnvironmentVariableName": "SHOPIFY_RETNER_WIDGET_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget",
+      "uid": "b1366753-5dbf-3fcf-5eba-fd2afe49df3b39cd8e89",
+      "devUUID": "dev-b1366753-5dbf-3fcf-5eba-fd2afe49df3b39cd8e89"
+    },
+    {
+      "configuration": {
+        "name": "Retner Smart Push",
+        "access_scopes": {
+          "scopes": "read_customers,read_discounts,read_products,write_customers,write_discounts"
+        },
+        "auth": {
+          "redirect_urls": [
+            "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/callback",
+            "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/shopify/callback",
+            "https://edgar-pseudoaggressive-conception.ngrok-free.dev/api/auth/callback"
+          ]
+        }
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "specification": {
+        "externalIdentifier": "app_access",
+        "additionalIdentifiers": [],
+        "externalName": "App access",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "app_access",
+        "registrationLimit": 1,
+        "experience": "configuration",
+        "uidStrategy": "single",
+        "identifier": "app_access",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "app_access",
+      "localIdentifier": "app_access",
+      "idEnvironmentVariableName": "SHOPIFY_APP_ACCESS_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "uid": "app_access",
+      "devUUID": "dev-app_access"
+    },
+    {
+      "configuration": {
+        "name": "Retner Smart Push",
+        "webhooks": {
+          "api_version": "2024-01",
+          "subscriptions": [
+            {
+              "topics": [
+                "app/uninstalled"
+              ],
+              "uri": "/api/webhooks"
+            }
+          ]
+        }
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "specification": {
+        "externalIdentifier": "webhooks",
+        "additionalIdentifiers": [],
+        "externalName": "Imperative Webhooks Api Version",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "webhooks",
+        "registrationLimit": 1,
+        "experience": "configuration",
+        "uidStrategy": "single",
+        "identifier": "webhooks",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "webhooks",
+      "localIdentifier": "webhooks",
+      "idEnvironmentVariableName": "SHOPIFY_WEBHOOKS_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "uid": "webhooks",
+      "devUUID": "dev-webhooks"
+    },
+    {
+      "configuration": {
+        "name": "Retner Smart Push",
+        "application_url": "https://edgar-pseudoaggressive-conception.ngrok-free.dev",
+        "embedded": true
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "specification": {
+        "externalIdentifier": "app_home",
+        "additionalIdentifiers": [],
+        "externalName": "App Home",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "app_home",
+        "registrationLimit": 1,
+        "experience": "configuration",
+        "uidStrategy": "single",
+        "identifier": "app_home",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "app_home",
+      "localIdentifier": "app_home",
+      "idEnvironmentVariableName": "SHOPIFY_APP_HOME_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "uid": "app_home",
+      "devUUID": "dev-app_home"
+    },
+    {
+      "configuration": {
+        "name": "Retner Smart Push",
+        "handle": "retner-smart-push"
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "specification": {
+        "externalIdentifier": "branding",
+        "additionalIdentifiers": [],
+        "externalName": "Branding",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "branding",
+        "registrationLimit": 1,
+        "experience": "configuration",
+        "uidStrategy": "single",
+        "identifier": "branding",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "branding",
+      "localIdentifier": "branding",
+      "idEnvironmentVariableName": "SHOPIFY_BRANDING_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "uid": "branding",
+      "devUUID": "dev-branding"
+    },
+    {
+      "configuration": {
+        "topic": "app/uninstalled",
+        "api_version": "2024-01",
+        "uri": "/api/webhooks"
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/shopify.app.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "specification": {
+        "externalIdentifier": "webhook_subscription",
+        "additionalIdentifiers": [],
+        "externalName": "Webhooks Subscriptions",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "webhook_subscription",
+        "registrationLimit": 1000,
+        "experience": "configuration",
+        "uidStrategy": "dynamic",
+        "identifier": "webhook_subscription",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "9f85c2a51f4db2dca21a03809b44c54a826447f3",
+      "localIdentifier": "9f85c2a51f4db2dca21a03809b44c54a826447f3",
+      "idEnvironmentVariableName": "SHOPIFY_9F85C2A51F4DB2DCA21A03809B44C54A826447F3_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not",
+      "uid": "app/uninstalled::undefined::/api/webhooks",
+      "devUUID": "dev-app/uninstalled::undefined::/api/webhooks"
+    }
+  ],
+  "errors": {
+    "errors": []
+  },
+  "specifications": [
+    {
+      "externalIdentifier": "admin_link",
+      "additionalIdentifiers": [],
+      "externalName": "Admin Link",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "admin_link",
+      "registrationLimit": 40,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "include-admin-link-assets",
+              "name": "Include Admin Link Assets",
+              "type": "include_assets",
+              "config": {
+                "generatesAssetsManifest": true,
+                "inclusions": [
+                  {
+                    "type": "configKey",
+                    "anchor": "targeting[]",
+                    "groupBy": "target",
+                    "key": "targeting[].tools"
+                  },
+                  {
+                    "type": "configKey",
+                    "anchor": "targeting[]",
+                    "groupBy": "target",
+                    "key": "targeting[].instructions"
+                  },
+                  {
+                    "type": "configKey",
+                    "anchor": "targeting[]",
+                    "groupBy": "target",
+                    "key": "targeting[].intents[].schema"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "identifier": "admin_link",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "flow_action",
+      "additionalIdentifiers": [],
+      "externalName": "Flow Action",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "flow_action",
+      "registrationLimit": 100,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "flow_action",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "flow_trigger_lifecycle_callback",
+      "additionalIdentifiers": [],
+      "externalName": "Flow Trigger Lifecycle Callback",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "flow_trigger_lifecycle_callback",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "flow_trigger_lifecycle_callback",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "flow_trigger",
+      "additionalIdentifiers": [],
+      "externalName": "Flow Trigger",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "flow_trigger",
+      "registrationLimit": 100,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "flow_trigger",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "flow_template",
+      "additionalIdentifiers": [],
+      "externalName": "Flow Template",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "flow_template",
+      "registrationLimit": 300,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "copy-files",
+              "name": "Copy Files",
+              "type": "include_assets",
+              "config": {
+                "inclusions": [
+                  {
+                    "type": "pattern",
+                    "include": [
+                      "**/*.flow",
+                      "**/*.json",
+                      "**/*.toml"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "identifier": "flow_template",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "function",
+      "additionalIdentifiers": [
+        "order_discounts",
+        "cart_checkout_validation",
+        "cart_transform",
+        "delivery_customization",
+        "payment_customization",
+        "product_discounts",
+        "shipping_discounts",
+        "fulfillment_constraints",
+        "order_routing_location_rule",
+        "local_pickup_delivery_option_generator",
+        "pickup_point_delivery_option_generator"
+      ],
+      "externalName": "function",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "function",
+      "registrationLimit": 100,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "build-function",
+              "name": "Build Function",
+              "type": "build_function",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "function",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "ui_extension",
+      "additionalIdentifiers": [],
+      "externalName": "UI Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "ui_extension",
+      "registrationLimit": 50,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {
+                "generatesAssetsManifest": true,
+                "bundleFolder": "dist/"
+              }
+            },
+            {
+              "id": "include-ui-extension-assets",
+              "name": "Include UI Extension Assets",
+              "type": "include_assets",
+              "config": {
+                "generatesAssetsManifest": true,
+                "inclusions": [
+                  {
+                    "type": "configKey",
+                    "anchor": "extension_points[]",
+                    "groupBy": "target",
+                    "key": "extension_points[].tools"
+                  },
+                  {
+                    "type": "configKey",
+                    "anchor": "extension_points[]",
+                    "groupBy": "target",
+                    "key": "extension_points[].instructions"
+                  },
+                  {
+                    "type": "configKey",
+                    "anchor": "extension_points[]",
+                    "groupBy": "target",
+                    "key": "extension_points[].intents[].schema"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "identifier": "ui_extension",
+      "dependency": "@shopify/checkout-ui-extensions",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "editor_extension_collection",
+      "additionalIdentifiers": [],
+      "externalName": "Editor extension collection",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "editor_extension_collection",
+      "registrationLimit": 100,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "editor_extension_collection",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "webhook_subscription",
+      "additionalIdentifiers": [],
+      "externalName": "Webhooks Subscriptions",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "webhook_subscription",
+      "registrationLimit": 1000,
+      "experience": "configuration",
+      "uidStrategy": "dynamic",
+      "identifier": "webhook_subscription",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "events",
+      "additionalIdentifiers": [],
+      "externalName": "Events",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "events",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "events",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "privacy_compliance_webhooks",
+      "additionalIdentifiers": [],
+      "externalName": "Privacy Compliance Webhooks",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "privacy_compliance_webhooks",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "privacy_compliance_webhooks",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "app_access",
+      "additionalIdentifiers": [],
+      "externalName": "App access",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "app_access",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "app_access",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "webhooks",
+      "additionalIdentifiers": [],
+      "externalName": "Imperative Webhooks Api Version",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "webhooks",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "webhooks",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "app_proxy",
+      "additionalIdentifiers": [],
+      "externalName": "App Proxy",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "app_proxy",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "app_proxy",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "point_of_sale",
+      "additionalIdentifiers": [],
+      "externalName": "Point Of Sale Configuration",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "point_of_sale",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "point_of_sale",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "app_home",
+      "additionalIdentifiers": [],
+      "externalName": "App Home",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "app_home",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "app_home",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "branding",
+      "additionalIdentifiers": [],
+      "externalName": "Branding",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "branding",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "branding",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "sidekick",
+      "additionalIdentifiers": [],
+      "externalName": "Sidekick",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "sidekick",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "sidekick",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "channel_config",
+      "additionalIdentifiers": [],
+      "externalName": "Channel Configuration",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "channel_config",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "single",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "copy-files",
+              "name": "Copy Files",
+              "type": "include_assets",
+              "config": {
+                "inclusions": [
+                  {
+                    "type": "pattern",
+                    "baseDir": "specifications",
+                    "destination": "specifications",
+                    "include": [
+                      "**/*.json",
+                      "**/*.toml",
+                      "**/*.yaml",
+                      "**/*.yml",
+                      "**/*.svg"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "identifier": "channel_config",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "post_purchase_ui",
+      "additionalIdentifiers": [],
+      "externalName": "Checkout Post Purchase",
+      "surface": "post_purchase",
+      "partnersWebIdentifier": "post_purchase",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "checkout_post_purchase",
+      "dependency": "@shopify/post-purchase-ui-extensions",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "checkout_ui",
+      "additionalIdentifiers": [],
+      "externalName": "Checkout Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "checkout_ui_extension",
+      "registrationLimit": 50,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "checkout_ui_extension",
+      "dependency": "@shopify/checkout-ui-extensions",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "customer_authentication",
+      "additionalIdentifiers": [],
+      "externalName": "Customer Authentication",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "customer_authentication",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "customer_authentication",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "subscription_ui",
+      "additionalIdentifiers": [
+        "subscription_management"
+      ],
+      "externalName": "Product Subscription",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "product_subscription",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "product_subscription",
+      "dependency": "@shopify/admin-ui-extensions",
+      "graphQLType": "subscription_management",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "marketing_activity",
+      "additionalIdentifiers": [],
+      "externalName": "Marketing Activity",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "marketing_activity",
+      "registrationLimit": 100,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "marketing_activity",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "web_pixel",
+      "additionalIdentifiers": [],
+      "externalName": "Web Pixel Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "web_pixel",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "web_pixel_extension",
+      "dependency": "@shopify/web-pixels-extension",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "data",
+      "additionalIdentifiers": [],
+      "externalName": "Custom data",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "data",
+      "registrationLimit": 1,
+      "experience": "configuration",
+      "uidStrategy": "single",
+      "identifier": "data",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "theme_app_extension",
+      "additionalIdentifiers": [],
+      "externalName": "Online Store - App Theme Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "theme_app_extension",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "build-theme",
+              "name": "Build Theme Extension",
+              "type": "build_theme",
+              "config": {}
+            },
+            {
+              "id": "bundle-theme",
+              "name": "Bundle Theme Extension",
+              "type": "bundle_theme",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "theme",
+      "graphQLType": "theme_app_extension",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "payments_extension",
+      "additionalIdentifiers": [],
+      "externalName": "Payments Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "payments_extension",
+      "registrationLimit": 25,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "payments_extension",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "pos_ui",
+      "additionalIdentifiers": [],
+      "externalName": "POS UI Extension",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "pos_ui_extension",
+      "registrationLimit": 50,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "clientSteps": [
+        {
+          "lifecycle": "deploy",
+          "steps": [
+            {
+              "id": "bundle-ui",
+              "name": "Bundle UI Extension",
+              "type": "bundle_ui",
+              "config": {}
+            }
+          ]
+        }
+      ],
+      "identifier": "pos_ui_extension",
+      "dependency": "@shopify/retail-ui-extensions",
+      "loadedRemoteSpecs": true
+    },
+    {
+      "externalIdentifier": "subscription_link_extension",
+      "additionalIdentifiers": [],
+      "externalName": "Subscription Link",
+      "surface": "test-surface",
+      "partnersWebIdentifier": "subscription_link_extension",
+      "registrationLimit": 1,
+      "experience": "extension",
+      "uidStrategy": "uuid",
+      "identifier": "subscription_link_extension",
+      "loadedRemoteSpecs": true
+    }
+  ],
+  "remoteFlags": [],
+  "_hiddenConfig": {},
+  "packageManager": "npm",
+  "nodeDependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.0.3",
+    "pg": "^8.11.3",
+    "web-push": "^3.6.7"
+  },
+  "usesWorkspaces": false,
+  "allExtensions": [
+    {
+      "configuration": {
+        "name": "Retner Widget",
+        "type": "theme",
+        "handle": "retner-widget"
+      },
+      "configurationPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget/shopify.extension.toml",
+      "entrySourceFilePath": "",
+      "directory": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget",
+      "specification": {
+        "externalIdentifier": "theme_app_extension",
+        "additionalIdentifiers": [],
+        "externalName": "Online Store - App Theme Extension",
+        "surface": "test-surface",
+        "partnersWebIdentifier": "theme_app_extension",
+        "registrationLimit": 1,
+        "experience": "extension",
+        "uidStrategy": "uuid",
+        "clientSteps": [
+          {
+            "lifecycle": "deploy",
+            "steps": [
+              {
+                "id": "build-theme",
+                "name": "Build Theme Extension",
+                "type": "build_theme",
+                "config": {}
+              },
+              {
+                "id": "bundle-theme",
+                "name": "Bundle Theme Extension",
+                "type": "bundle_theme",
+                "config": {}
+              }
+            ]
+          }
+        ],
+        "identifier": "theme",
+        "graphQLType": "theme_app_extension",
+        "loadedRemoteSpecs": true
+      },
+      "handle": "retner-widget",
+      "localIdentifier": "retner-widget",
+      "idEnvironmentVariableName": "SHOPIFY_RETNER_WIDGET_ID",
+      "outputPath": "C:/Users/LG-182/Desktop/api/piyush-push-not/extensions/retner-widget",
+      "uid": "b1366753-5dbf-3fcf-5eba-fd2afe49df3b39cd8e89",
+      "devUUID": "dev-b1366753-5dbf-3fcf-5eba-fd2afe49df3b39cd8e89"
+    }
+  ]
+}

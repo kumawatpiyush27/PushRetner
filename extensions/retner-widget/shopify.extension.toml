@@ -1,0 +1,12 @@
+type = "theme"
+name = "Retner Widget"
+handle = "retner-widget"
+uid = "b1366753-5dbf-3fcf-5eba-fd2afe49df3b39cd8e89"
+
+[capabilities]
+theme_app_extension = true
+
+[[extensions]]
+type = "theme"
+name = "Retner Widget"
+handle = "retner-widget"

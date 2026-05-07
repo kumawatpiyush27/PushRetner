@@ -1,0 +1,25 @@
+client_id = "f30492469a636d7f010fe6e905ddc2b5"
+name = "Retner Smart Push"
+handle = "retner-smart-push"
+application_url = "https://edgar-pseudoaggressive-conception.ngrok-free.dev"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[access_scopes]
+scopes = "read_products,write_customers,read_customers,write_discounts,read_discounts"
+
+[auth]
+redirect_urls = [
+  "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/callback",
+  "https://edgar-pseudoaggressive-conception.ngrok-free.dev/auth/shopify/callback",
+  "https://edgar-pseudoaggressive-conception.ngrok-free.dev/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled" ]
+uri = "/api/webhooks"
