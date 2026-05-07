@@ -25,6 +25,9 @@
       fetch(apiBase + "/api/lead-capture/widget/config?shop=" + shop, {
         headers: { "ngrok-skip-browser-warning": "69420" }
       })
+
+
+      
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(data) {
           if (!data || !data.tools || data.tools.length === 0) return;
