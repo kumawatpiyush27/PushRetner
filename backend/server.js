@@ -210,7 +210,20 @@ app.post('/webhooks/shopify/data/customer', verifyShopifyWebhook, (req, res) => 
 app.post('/webhooks/shopify/order', verifyShopifyWebhook, async (req, res) => {
     console.log('Webhook Received: Order Create (Verified)');
     try {
-        const { id, total_price, landing_site, landing_site_ref } = req.body;
+        const { id, total_price, landing_site, landing_site_ref, checkout_id, checkout_token, cart_token } = req.body;
+
+        const db = getPool();
+        
+        // 0. Remove completed checkout from abandoned list to prevent false reminders
+        try {
+            if (checkout_id || checkout_token || cart_token) {
+                await db.query(
+                    'DELETE FROM abandoned_checkouts WHERE checkout_id = $1 OR token = $2 OR token = $3', 
+                    [checkout_id ? checkout_id.toString() : null, checkout_token, cart_token]
+                );
+                console.log(`✅ Cleared completed checkout from abandoned_checkouts`);
+            }
+        } catch(err) { console.error('Failed to clear abandoned checkout:', err.message); }
 
         // 1. Identify Campaign
         let campaignId = null;
@@ -289,6 +302,23 @@ app.post('/apps/push/subscribe', async (req, res) => {
         await SubscriptionModel.create(req.body);
         res.json({ success: true });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/apps/push/link-cart', async (req, res) => {
+    try {
+        const { endpoint, cartToken, customerId, storeId } = req.body;
+        if (!endpoint || !cartToken) return res.status(400).json({ error: 'Missing endpoint or cartToken' });
+        
+        const db = getPool();
+        await db.query(
+            'UPDATE subscriptions SET cart_token = $1, customer_id = COALESCE($2, customer_id) WHERE endpoint = $3',
+            [cartToken, customerId || null, endpoint]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Link cart error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -391,6 +421,7 @@ app.get('/store-admin', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     // SSO Handling: Check for Token from Shopify App
+    let injectedStore = null;
     if (req.query.sso_token) {
         try {
             const secret = 'retner_sso_final_2025';
@@ -406,6 +437,7 @@ app.get('/store-admin', async (req, res) => {
                     domain: decoded.shop
                 };
 
+                injectedStore = authStore;
                 console.log(`✅ SSO Token Valid. Auto-Creating/Syncing Account for: ${shopId}`);
 
                 // AUTO-REGISTER IN DB
@@ -420,32 +452,6 @@ app.get('/store-admin', async (req, res) => {
                 } catch (dbErr) {
                     console.error("⚠️ SSO DB Upsert Error:", dbErr.message);
                 }
-
-                // Inject Script to Save Session & Reload Clean
-                return res.send(`
-                     <html><body style="font-family:sans-serif; text-align:center; padding-top:50px;">
-                     <h2>Logging you in...</h2>
-                     <p>Setting up your dashboard for ${decoded.shop}</p>
-                     <script>
-                         // Clear OLD Session
-                         localStorage.removeItem('store');
-                         sessionStorage.clear();
-                         
-                         // Set NEW Session
-                         try {
-                             localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
-                             console.log('Session Set');
-                         } catch(e) {
-                             document.body.innerHTML += '<p style="color:red">Storage Error: ' + e.message + '</p>';
-                         }
-                         
-                         // Redirect with Delay to ensure storage commit
-                         setTimeout(function() {
-                             window.location.href = '/store-admin';
-                         }, 1000);
-                     </script>
-                     </body></html>
-                 `);
             }
         } catch (e) {
             console.error("❌ SSO Verification Failed:", e.message);
@@ -1243,10 +1249,13 @@ app.get('/store-admin', async (req, res) => {
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
                             <h3 style="margin: 0;" id="editor-step-title">Edit Reminder 1</h3>
                             
-                            <label class="toggle-switch" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 13px; font-weight: 500;">Enable Step</span>
-                                <input type="checkbox" id="edit-step-enabled" onchange="updateStepStatus()">
-                            </label>
+                                <label class="switch">
+                                    <input type="checkbox" id="edit-step-enabled" onchange="updateStepStatus()">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
                         </div>
                         
                         <!-- TIMING SETTINGS -->
@@ -1352,7 +1361,23 @@ app.get('/store-admin', async (req, res) => {
 
     <script>
         // STATE
-        let store = JSON.parse(localStorage.getItem('store') || 'null');
+        let injectedStore = ${injectedStore ? JSON.stringify(injectedStore) : 'null'};
+        let store = null;
+        
+        if (injectedStore) {
+            store = injectedStore;
+            try {
+                localStorage.setItem('store', JSON.stringify(store));
+            } catch(e) {
+                console.error("Storage Error", e);
+            }
+            // Clear SSO token from URL
+            if (window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        } else {
+            store = JSON.parse(localStorage.getItem('store') || 'null');
+        }
         
         // INIT
         if(store) {
@@ -2399,7 +2424,7 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
     const shopDomain = req.headers['x-shopify-shop-domain'];
     if (!shopDomain) return res.status(200).send('No Shop Header');
 
-    const { id, updated_at, abandoned_checkout_url, customer, email, cart_token } = req.body;
+    const { id, updated_at, abandoned_checkout_url, customer, email, cart_token, token } = req.body;
     await initCheckoutsTable();
 
     try {
@@ -2419,6 +2444,7 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
         const storeId = subRes.rows[0].store_id;
 
         // Upsert Checkout
+        const activeToken = cart_token || token;
         await db.query(`
             INSERT INTO abandoned_checkouts 
             (store_id, checkout_id, token, cart_url, email, updated_at)
@@ -2426,8 +2452,9 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
             ON CONFLICT (checkout_id) DO UPDATE SET 
             updated_at = EXCLUDED.updated_at,
             cart_url = EXCLUDED.cart_url,
-            email = EXCLUDED.email
-        `, [storeId, id.toString(), cart_token, abandoned_checkout_url, email || (customer ? customer.email : null), updated_at]);
+            email = EXCLUDED.email,
+            token = COALESCE(EXCLUDED.token, abandoned_checkouts.token)
+        `, [storeId, id.toString(), activeToken, abandoned_checkout_url, email || (customer ? customer.email : null), updated_at]);
 
     } catch (e) { console.error('Checkout Hook Error', e); }
     res.status(200).send('OK');
