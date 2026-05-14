@@ -77,7 +77,15 @@ const initStoresTable = async () => {
             created_at TIMESTAMP DEFAULT NOW()
         );
     `;
-    try { await getPool().query(query); console.log('✅ Stores table ready'); }
+    try { 
+        await getPool().query(query); 
+        console.log('✅ Stores table ready'); 
+        // Migration: Add direct_prompt_enabled
+        try {
+            await getPool().query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS direct_prompt_enabled BOOLEAN DEFAULT FALSE');
+            console.log('✅ Stores table migrated: direct_prompt_enabled added');
+        } catch(e) { console.log('Migration note (stores):', e.message); }
+    }
     catch (e) { console.error('❌ Stores table error:', e); }
 };
 
@@ -320,6 +328,30 @@ app.post('/apps/push/link-cart', async (req, res) => {
     } catch (error) {
         console.error('Link cart error:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /apps/push/config (For Extension)
+app.get('/apps/push/config', async (req, res) => {
+    try {
+        const { shop } = req.query;
+        if (!shop) return res.json({ success: false, error: 'No shop provided' });
+
+        const shopHandle = shop.split('.')[0];
+        const db = getPool();
+        const result = await db.query('SELECT direct_prompt_enabled FROM stores WHERE store_id = $1', [shopHandle]);
+        
+        if (result.rows.length > 0) {
+            res.json({ 
+                success: true, 
+                direct_prompt_enabled: result.rows[0].direct_prompt_enabled 
+            });
+        } else {
+            res.json({ success: true, direct_prompt_enabled: false });
+        }
+    } catch (error) {
+        console.error('Config fetch error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1064,12 +1096,18 @@ app.get('/store-admin', async (req, res) => {
                         <input type="text" id="setLogoUrl" placeholder="https://example.com/logo.png">
                         <p style="font-size: 12px; color: #666; margin-top: 4px;">This logo will be used as the default notification icon.</p>
                     </div>
-                    <div class="form-group">
-                        <label>Store Contact Email</label>
-                        <input type="email" id="setStoreEmail" placeholder="e.g. Koregrowtech@gmail.com">
-                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Used for Push Notification Sender Identity (VAPID Subject).</p>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-top: 20px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 14px;">Bypass Custom Popup</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 2px;">Directly show the browser's native notification prompt.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="setDirectPrompt">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <button class="new-campaign-btn" onclick="saveSettings()">Save Changes</button>
+
+                    <button class="new-campaign-btn" style="margin-top: 24px;" onclick="saveSettings()">Save Changes</button>
                     <div id="saveMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
                 </div>
             </div>
@@ -1927,6 +1965,7 @@ app.get('/store-admin', async (req, res) => {
                  document.getElementById('setStoreName').value = data.store.store_name;
                  document.getElementById('setLogoUrl').value = data.store.logo_url || '';
                  document.getElementById('setStoreEmail').value = data.store.store_email || '';
+                 document.getElementById('setDirectPrompt').checked = data.store.direct_prompt_enabled || false;
              }
         }
 
@@ -1934,6 +1973,7 @@ app.get('/store-admin', async (req, res) => {
             const storeName = document.getElementById('setStoreName').value;
             const logoUrl = document.getElementById('setLogoUrl').value;
             const storeEmail = document.getElementById('setStoreEmail').value;
+            const directPromptEnabled = document.getElementById('setDirectPrompt').checked;
 
             const btn = document.querySelector('#view-settings button');
             const originalText = btn.innerHTML;
@@ -1943,7 +1983,7 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/update-settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, storeName, logoUrl, storeEmail })
+                body: JSON.stringify({ storeId: store.id, storeName, logoUrl, storeEmail, directPromptEnabled })
             });
             const data = await res.json();
             btn.innerHTML = originalText;
@@ -2605,7 +2645,7 @@ app.get('/my-store/details', async (req, res) => {
         // Ensure email col exists
         try { await db.query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS store_email TEXT'); } catch (e) { }
 
-        const result = await db.query('SELECT store_name, logo_url, store_email FROM stores WHERE store_id = $1', [storeId]);
+        const result = await db.query('SELECT store_name, logo_url, store_email, direct_prompt_enabled FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, store: result.rows[0] });
         } else {
@@ -2615,10 +2655,10 @@ app.get('/my-store/details', async (req, res) => {
 });
 
 app.post('/my-store/update-settings', async (req, res) => {
-    const { storeId, storeName, logoUrl, storeEmail } = req.body;
+    const { storeId, storeName, logoUrl, storeEmail, directPromptEnabled } = req.body;
     try {
         const db = getPool();
-        await db.query('UPDATE stores SET store_name = $1, logo_url = $2, store_email = $3 WHERE store_id = $4', [storeName, logoUrl, storeEmail, storeId]);
+        await db.query('UPDATE stores SET store_name = $1, logo_url = $2, store_email = $3, direct_prompt_enabled = $4 WHERE store_id = $5', [storeName, logoUrl, storeEmail, directPromptEnabled || false, storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
