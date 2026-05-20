@@ -8,6 +8,9 @@ const BACKEND_URL = ''; // Kept for reference, logic uses /apps/push proxy below
 // Subscribe to push notifications (Direct App Proxy Method)
 async function subscribeToPushNotifications() {
     try {
+        if (typeof Notification === 'undefined') {
+            throw new Error('Notifications are not supported in this browser/device.');
+        }
         console.log('Step 1: Requesting Permission...');
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
@@ -101,7 +104,8 @@ async function subscribeToPushNotifications() {
         console.error('Subscription Failed:', error);
         
         let errorMessage = error.message;
-        if (error.message.includes('blocked') || error.message.includes('denied') || Notification.permission === 'denied') {
+        const isPermissionDenied = (typeof Notification !== 'undefined' && Notification.permission === 'denied');
+        if (error.message.includes('blocked') || error.message.includes('denied') || isPermissionDenied) {
             errorMessage = 'Notification permission was blocked. Please enable notifications in your browser/site settings and try again.';
         }
         
