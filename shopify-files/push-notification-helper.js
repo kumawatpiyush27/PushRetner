@@ -99,7 +99,13 @@ async function subscribeToPushNotifications() {
 
     } catch (error) {
         console.error('Subscription Failed:', error);
-        alert('❌ Error: ' + error.message + '\n\nPlease try again.');
+        
+        let errorMessage = error.message;
+        if (error.message.includes('blocked') || error.message.includes('denied') || Notification.permission === 'denied') {
+            errorMessage = 'Notification permission was blocked. Please enable notifications in your browser/site settings and try again.';
+        }
+        
+        alert('❌ Error: ' + errorMessage);
         return { success: false, message: error.message };
     }
 }

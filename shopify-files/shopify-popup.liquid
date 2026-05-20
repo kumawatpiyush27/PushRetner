@@ -114,6 +114,25 @@
     opacity: 1;
   }
 
+  .push-popup-brand {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 10px;
+    opacity: 0.65;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+
+  .push-popup-brand a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .push-popup-brand a:hover {
+    text-decoration: underline;
+  }
+
   /* Mobile Responsive */
   @media (max-width: 480px) {
     .push-notification-popup {
@@ -146,6 +165,10 @@
       Maybe Later
     </button>
   </div>
+
+  <div class="push-popup-brand">
+    Powered by <a href="https://retner.ai" target="_blank" rel="noopener noreferrer">Retner.ai</a>
+  </div>
 </div>
 
 <!-- Push Notification Script -->
@@ -154,10 +177,31 @@
 <script>
   // Show popup after 5 seconds if user hasn't subscribed
   setTimeout(() => {
+    // If notifications are not supported or permission is already blocked/denied, do not show the popup
+    if (!('Notification' in window) || Notification.permission === 'denied') {
+      console.log('Push notifications not supported or permission blocked. Hiding popup.');
+      return;
+    }
+
+    // Auto-sync localStorage if permission is already granted
+    if (Notification.permission === 'granted') {
+      localStorage.setItem('pushNotificationSubscribed', 'true');
+      return;
+    }
+
     const isSubscribed = localStorage.getItem('pushNotificationSubscribed');
-    const popupDismissed = localStorage.getItem('pushPopupDismissed');
     
-    if (!isSubscribed && !popupDismissed) {
+    // Check if the popup was snoozed/dismissed within the last 24 hours
+    const dismissedTime = localStorage.getItem('pushPopupDismissedTime');
+    let isDismissed = false;
+    if (dismissedTime) {
+      const hoursPassed = (Date.now() - parseInt(dismissedTime, 10)) / (1000 * 60 * 60);
+      if (hoursPassed < 24) {
+        isDismissed = true;
+      }
+    }
+
+    if (!isSubscribed && !isDismissed) {
       document.getElementById('pushNotificationPopup').classList.remove('hidden');
     }
   }, 5000); // Show after 5 seconds
@@ -175,20 +219,15 @@
     }
   }
 
-  // Dismiss popup for later
+  // Dismiss popup for later (snooze for 24 hours)
   function laterPushNotifications() {
     document.getElementById('pushNotificationPopup').classList.add('hidden');
-    localStorage.setItem('pushPopupDismissed', 'true');
-    
-    // Show again after 24 hours
-    setTimeout(() => {
-      localStorage.removeItem('pushPopupDismissed');
-    }, 24 * 60 * 60 * 1000);
+    localStorage.setItem('pushPopupDismissedTime', Date.now().toString());
   }
 
-  // Close popup permanently
+  // Close popup permanently (or set long snooze)
   function closePushPopup() {
     document.getElementById('pushNotificationPopup').classList.add('hidden');
-    localStorage.setItem('pushPopupDismissed', 'true');
+    localStorage.setItem('pushPopupDismissedTime', Date.now().toString()); // Snoozes for 24 hours
   }
 </script>
