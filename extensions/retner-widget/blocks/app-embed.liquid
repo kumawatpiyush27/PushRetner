@@ -8,6 +8,13 @@
       "id": "enable_spin_wheel",
       "label": "Enable Spin Wheel",
       "default": true
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "API Base URL",
+      "info": "The base URL of your backend API. Must be HTTPS (e.g. https://yourdomain.com). HTTP will not work on live stores.",
+      "default": "https://test.thebotmode.com"
     }
   ]
 }
@@ -16,21 +23,46 @@
 {% if block.settings.enable_spin_wheel %}
   <script data-retner-loader>
     (function() {
-      console.log("[Retner] Loader Version 119 - Initializing...");
-      // Retner Spin Wheel Loader - Updated for ngrok testing
+      console.log("[Retner] Loader Version 120 - Initializing...");
+
       var shop = "{{ shop.permanent_domain }}";
-           var apiBase = "https://edgar-pseudoaggressive-conception.ngrok-free.dev"; 
+
+      // Use the API Base URL from settings (entered in Shopify theme editor)
+      var rawApiBase = "{{ block.settings.api_base_url | strip }}";
+
+      // Fallback to hardcoded if setting is empty
+      if (!rawApiBase || rawApiBase.trim() === "") {
+        rawApiBase = "https://test.thebotmode.com";
+      }
+
+      // ⚠️ CRITICAL: Force HTTPS — Shopify is HTTPS, HTTP calls get blocked by browser (Mixed Content)
+      var apiBase = rawApiBase.replace(/^http:\/\//i, "https://");
+
+      console.log("[Retner] Shop:", shop);
+      console.log("[Retner] API Base:", apiBase);
+
+      if (!shop || shop.trim() === "") {
+        console.error("[Retner] No shop domain found. Widget will not load.");
+        return;
+      }
 
       // 1. Fetch active tool config to get tool IDs for this shop
-      fetch(apiBase + "/api/lead-capture/widget/config?shop=" + shop, {
+      fetch(apiBase + "/api/lead-capture/widget/config?shop=" + encodeURIComponent(shop), {
         headers: { "ngrok-skip-browser-warning": "69420" }
       })
-
-
-      
-        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(r) {
+          console.log("[Retner] Config fetch status:", r.status);
+          return r.ok ? r.json() : null;
+        })
         .then(function(data) {
-          if (!data || !data.tools || data.tools.length === 0) return;
+          if (!data) {
+            console.warn("[Retner] Config response was empty or error. Widget will not load.");
+            return;
+          }
+          if (!data.tools || data.tools.length === 0) {
+            console.warn("[Retner] No active tools found for shop:", shop);
+            return;
+          }
 
           var tools = data.tools;
           var migration = data.themeMigrationWarning;
@@ -42,6 +74,8 @@
 
           // 3. Check trigger conditions for the first live tool
           var tool = tools[0];
+          console.log("[Retner] Checking triggers for tool:", tool._id);
+
           var params = new URLSearchParams({
             device: /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
             currentUrl: window.location.href
@@ -50,17 +84,35 @@
           fetch(apiBase + "/api/lead-capture/" + tool._id + "/check-trigger?" + params.toString(), {
             headers: { "ngrok-skip-browser-warning": "69420" }
           })
-            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(r) {
+              console.log("[Retner] Trigger check status:", r.status);
+              return r.ok ? r.json() : null;
+            })
             .then(function(trigger) {
-              if (!trigger || !trigger.shouldShow) return;
+              if (!trigger) {
+                console.warn("[Retner] Trigger response empty.");
+                return;
+              }
+              console.log("[Retner] Trigger result:", trigger.shouldShow);
+              if (!trigger.shouldShow) {
+                console.log("[Retner] Trigger conditions not met. Widget will not show.");
+                return;
+              }
 
               // 4. Trigger conditions met — lazy-inject the main wheel bundle
+              console.log("[Retner] Loading widget bundle from:", apiBase + "/widget.js");
               var script = document.createElement("script");
               script.src = apiBase + "/widget.js";
               script.setAttribute("data-shop", shop);
               script.setAttribute("data-tool-id", tool._id);
               script.setAttribute("data-api-base", apiBase);
               script.async = true;
+              script.onerror = function() {
+                console.error("[Retner] Failed to load widget.js from:", script.src);
+              };
+              script.onload = function() {
+                console.log("[Retner] widget.js loaded successfully!");
+              };
               document.body.appendChild(script);
             })
             .catch(function(e) {
@@ -69,6 +121,7 @@
         })
         .catch(function(e) {
           console.error("[Retner] Widget config fetch failed:", e);
+          console.error("[Retner] Is the backend running? Is HTTPS configured? URL was:", apiBase);
         });
     })();
   </script>
