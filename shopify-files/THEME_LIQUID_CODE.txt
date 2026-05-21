@@ -97,6 +97,25 @@
     background: rgba(255, 255, 255, 0.3);
   }
 
+  .push-popup-brand {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 10px;
+    opacity: 0.65;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+
+  .push-popup-brand a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .push-popup-brand a:hover {
+    text-decoration: underline;
+  }
+
   /* Mobile Responsive */
   @media (max-width: 480px) {
     .push-notification-popup {
@@ -127,6 +146,10 @@
       Maybe Later
     </button>
   </div>
+
+  <div class="push-popup-brand">
+    Powered by <a href="https://retner.ai" target="_blank" rel="noopener noreferrer">Retner.ai</a>
+  </div>
 </div>
 
 <!-- Load Push Notification Helper Script -->
@@ -136,10 +159,31 @@
 <script>
   // Show popup after 5 seconds if user hasn't subscribed
   setTimeout(function() {
+    // If notifications are not supported or permission is already blocked/denied, do not show the popup
+    if (!('Notification' in window) || Notification.permission === 'denied') {
+      console.log('Push notifications not supported or permission blocked. Hiding popup.');
+      return;
+    }
+
+    // Auto-sync localStorage if permission is already granted
+    if (Notification.permission === 'granted') {
+      localStorage.setItem('pushNotificationSubscribed', 'true');
+      return;
+    }
+
     const isSubscribed = localStorage.getItem('pushNotificationSubscribed');
-    const popupDismissed = localStorage.getItem('pushPopupDismissed');
     
-    if (!isSubscribed && !popupDismissed) {
+    // Check if the popup was snoozed/dismissed within the last 24 hours
+    const dismissedTime = localStorage.getItem('pushPopupDismissedTime');
+    let isDismissed = false;
+    if (dismissedTime) {
+      const hoursPassed = (Date.now() - parseInt(dismissedTime, 10)) / (1000 * 60 * 60);
+      if (hoursPassed < 24) {
+        isDismissed = true;
+      }
+    }
+    
+    if (!isSubscribed && !isDismissed) {
       document.getElementById('pushNotificationPopup').classList.remove('hidden');
       console.log('🔔 Push notification popup shown');
     }
@@ -163,12 +207,7 @@
   function laterPushNotifications() {
     console.log('⏸️ User clicked Maybe Later');
     document.getElementById('pushNotificationPopup').classList.add('hidden');
-    localStorage.setItem('pushPopupDismissed', 'true');
-    
-    // Show again after 24 hours
-    setTimeout(function() {
-      localStorage.removeItem('pushPopupDismissed');
-    }, 24 * 60 * 60 * 1000);
+    localStorage.setItem('pushPopupDismissedTime', Date.now().toString());
   }
 </script>
 

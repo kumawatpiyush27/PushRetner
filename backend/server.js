@@ -77,7 +77,15 @@ const initStoresTable = async () => {
             created_at TIMESTAMP DEFAULT NOW()
         );
     `;
-    try { await getPool().query(query); console.log('✅ Stores table ready'); }
+    try { 
+        await getPool().query(query); 
+        console.log('✅ Stores table ready'); 
+        // Migration: Add direct_prompt_enabled
+        try {
+            await getPool().query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS direct_prompt_enabled BOOLEAN DEFAULT FALSE');
+            console.log('✅ Stores table migrated: direct_prompt_enabled added');
+        } catch(e) { console.log('Migration note (stores):', e.message); }
+    }
     catch (e) { console.error('❌ Stores table error:', e); }
 };
 
@@ -210,7 +218,20 @@ app.post('/webhooks/shopify/data/customer', verifyShopifyWebhook, (req, res) => 
 app.post('/webhooks/shopify/order', verifyShopifyWebhook, async (req, res) => {
     console.log('Webhook Received: Order Create (Verified)');
     try {
-        const { id, total_price, landing_site, landing_site_ref } = req.body;
+        const { id, total_price, landing_site, landing_site_ref, checkout_id, checkout_token, cart_token } = req.body;
+
+        const db = getPool();
+        
+        // 0. Remove completed checkout from abandoned list to prevent false reminders
+        try {
+            if (checkout_id || checkout_token || cart_token) {
+                await db.query(
+                    'DELETE FROM abandoned_checkouts WHERE checkout_id = $1 OR token = $2 OR token = $3', 
+                    [checkout_id ? checkout_id.toString() : null, checkout_token, cart_token]
+                );
+                console.log(`✅ Cleared completed checkout from abandoned_checkouts`);
+            }
+        } catch(err) { console.error('Failed to clear abandoned checkout:', err.message); }
 
         // 1. Identify Campaign
         let campaignId = null;
@@ -290,6 +311,47 @@ app.post('/apps/push/subscribe', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/apps/push/link-cart', async (req, res) => {
+    try {
+        const { endpoint, cartToken, customerId, storeId } = req.body;
+        if (!endpoint || !cartToken) return res.status(400).json({ error: 'Missing endpoint or cartToken' });
+        
+        const db = getPool();
+        await db.query(
+            'UPDATE subscriptions SET cart_token = $1, customer_id = COALESCE($2, customer_id) WHERE endpoint = $3',
+            [cartToken, customerId || null, endpoint]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Link cart error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /apps/push/config (For Extension)
+app.get('/apps/push/config', async (req, res) => {
+    try {
+        const { shop } = req.query;
+        if (!shop) return res.json({ success: false, error: 'No shop provided' });
+
+        const shopHandle = shop.split('.')[0];
+        const db = getPool();
+        const result = await db.query('SELECT direct_prompt_enabled FROM stores WHERE store_id = $1', [shopHandle]);
+        
+        if (result.rows.length > 0) {
+            res.json({ 
+                success: true, 
+                direct_prompt_enabled: result.rows[0].direct_prompt_enabled 
+            });
+        } else {
+            res.json({ success: true, direct_prompt_enabled: false });
+        }
+    } catch (error) {
+        console.error('Config fetch error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -391,6 +453,7 @@ app.get('/store-admin', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     // SSO Handling: Check for Token from Shopify App
+    let injectedStore = null;
     if (req.query.sso_token) {
         try {
             const secret = 'retner_sso_final_2025';
@@ -406,6 +469,7 @@ app.get('/store-admin', async (req, res) => {
                     domain: decoded.shop
                 };
 
+                injectedStore = authStore;
                 console.log(`✅ SSO Token Valid. Auto-Creating/Syncing Account for: ${shopId}`);
 
                 // AUTO-REGISTER IN DB
@@ -420,32 +484,6 @@ app.get('/store-admin', async (req, res) => {
                 } catch (dbErr) {
                     console.error("⚠️ SSO DB Upsert Error:", dbErr.message);
                 }
-
-                // Inject Script to Save Session & Reload Clean
-                return res.send(`
-                     <html><body style="font-family:sans-serif; text-align:center; padding-top:50px;">
-                     <h2>Logging you in...</h2>
-                     <p>Setting up your dashboard for ${decoded.shop}</p>
-                     <script>
-                         // Clear OLD Session
-                         localStorage.removeItem('store');
-                         sessionStorage.clear();
-                         
-                         // Set NEW Session
-                         try {
-                             localStorage.setItem('store', JSON.stringify(${JSON.stringify(authStore)}));
-                             console.log('Session Set');
-                         } catch(e) {
-                             document.body.innerHTML += '<p style="color:red">Storage Error: ' + e.message + '</p>';
-                         }
-                         
-                         // Redirect with Delay to ensure storage commit
-                         setTimeout(function() {
-                             window.location.href = '/store-admin';
-                         }, 1000);
-                     </script>
-                     </body></html>
-                 `);
             }
         } catch (e) {
             console.error("❌ SSO Verification Failed:", e.message);
@@ -1058,12 +1096,18 @@ app.get('/store-admin', async (req, res) => {
                         <input type="text" id="setLogoUrl" placeholder="https://example.com/logo.png">
                         <p style="font-size: 12px; color: #666; margin-top: 4px;">This logo will be used as the default notification icon.</p>
                     </div>
-                    <div class="form-group">
-                        <label>Store Contact Email</label>
-                        <input type="email" id="setStoreEmail" placeholder="e.g. Koregrowtech@gmail.com">
-                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Used for Push Notification Sender Identity (VAPID Subject).</p>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-top: 20px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 14px;">Bypass Custom Popup</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 2px;">Directly show the browser's native notification prompt.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="setDirectPrompt">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <button class="new-campaign-btn" onclick="saveSettings()">Save Changes</button>
+
+                    <button class="new-campaign-btn" style="margin-top: 24px;" onclick="saveSettings()">Save Changes</button>
                     <div id="saveMsg" style="margin-top: 10px; font-weight: bold; color: green; display: none;">Saved Successfully!</div>
                 </div>
             </div>
@@ -1243,10 +1287,13 @@ app.get('/store-admin', async (req, res) => {
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
                             <h3 style="margin: 0;" id="editor-step-title">Edit Reminder 1</h3>
                             
-                            <label class="toggle-switch" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 13px; font-weight: 500;">Enable Step</span>
-                                <input type="checkbox" id="edit-step-enabled" onchange="updateStepStatus()">
-                            </label>
+                                <label class="switch">
+                                    <input type="checkbox" id="edit-step-enabled" onchange="updateStepStatus()">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
                         </div>
                         
                         <!-- TIMING SETTINGS -->
@@ -1352,7 +1399,23 @@ app.get('/store-admin', async (req, res) => {
 
     <script>
         // STATE
-        let store = JSON.parse(localStorage.getItem('store') || 'null');
+        let injectedStore = ${injectedStore ? JSON.stringify(injectedStore) : 'null'};
+        let store = null;
+        
+        if (injectedStore) {
+            store = injectedStore;
+            try {
+                localStorage.setItem('store', JSON.stringify(store));
+            } catch(e) {
+                console.error("Storage Error", e);
+            }
+            // Clear SSO token from URL
+            if (window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        } else {
+            store = JSON.parse(localStorage.getItem('store') || 'null');
+        }
         
         // INIT
         if(store) {
@@ -1902,6 +1965,7 @@ app.get('/store-admin', async (req, res) => {
                  document.getElementById('setStoreName').value = data.store.store_name;
                  document.getElementById('setLogoUrl').value = data.store.logo_url || '';
                  document.getElementById('setStoreEmail').value = data.store.store_email || '';
+                 document.getElementById('setDirectPrompt').checked = data.store.direct_prompt_enabled || false;
              }
         }
 
@@ -1909,6 +1973,7 @@ app.get('/store-admin', async (req, res) => {
             const storeName = document.getElementById('setStoreName').value;
             const logoUrl = document.getElementById('setLogoUrl').value;
             const storeEmail = document.getElementById('setStoreEmail').value;
+            const directPromptEnabled = document.getElementById('setDirectPrompt').checked;
 
             const btn = document.querySelector('#view-settings button');
             const originalText = btn.innerHTML;
@@ -1918,7 +1983,7 @@ app.get('/store-admin', async (req, res) => {
             const res = await fetch('/my-store/update-settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ storeId: store.id, storeName, logoUrl, storeEmail })
+                body: JSON.stringify({ storeId: store.id, storeName, logoUrl, storeEmail, directPromptEnabled })
             });
             const data = await res.json();
             btn.innerHTML = originalText;
@@ -2399,7 +2464,7 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
     const shopDomain = req.headers['x-shopify-shop-domain'];
     if (!shopDomain) return res.status(200).send('No Shop Header');
 
-    const { id, updated_at, abandoned_checkout_url, customer, email, cart_token } = req.body;
+    const { id, updated_at, abandoned_checkout_url, customer, email, cart_token, token } = req.body;
     await initCheckoutsTable();
 
     try {
@@ -2419,6 +2484,7 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
         const storeId = subRes.rows[0].store_id;
 
         // Upsert Checkout
+        const activeToken = cart_token || token;
         await db.query(`
             INSERT INTO abandoned_checkouts 
             (store_id, checkout_id, token, cart_url, email, updated_at)
@@ -2426,8 +2492,9 @@ app.post('/webhooks/shopify/checkouts', async (req, res) => {
             ON CONFLICT (checkout_id) DO UPDATE SET 
             updated_at = EXCLUDED.updated_at,
             cart_url = EXCLUDED.cart_url,
-            email = EXCLUDED.email
-        `, [storeId, id.toString(), cart_token, abandoned_checkout_url, email || (customer ? customer.email : null), updated_at]);
+            email = EXCLUDED.email,
+            token = COALESCE(EXCLUDED.token, abandoned_checkouts.token)
+        `, [storeId, id.toString(), activeToken, abandoned_checkout_url, email || (customer ? customer.email : null), updated_at]);
 
     } catch (e) { console.error('Checkout Hook Error', e); }
     res.status(200).send('OK');
@@ -2578,7 +2645,7 @@ app.get('/my-store/details', async (req, res) => {
         // Ensure email col exists
         try { await db.query('ALTER TABLE stores ADD COLUMN IF NOT EXISTS store_email TEXT'); } catch (e) { }
 
-        const result = await db.query('SELECT store_name, logo_url, store_email FROM stores WHERE store_id = $1', [storeId]);
+        const result = await db.query('SELECT store_name, logo_url, store_email, direct_prompt_enabled FROM stores WHERE store_id = $1', [storeId]);
         if (result.rows.length > 0) {
             res.json({ success: true, store: result.rows[0] });
         } else {
@@ -2588,10 +2655,10 @@ app.get('/my-store/details', async (req, res) => {
 });
 
 app.post('/my-store/update-settings', async (req, res) => {
-    const { storeId, storeName, logoUrl, storeEmail } = req.body;
+    const { storeId, storeName, logoUrl, storeEmail, directPromptEnabled } = req.body;
     try {
         const db = getPool();
-        await db.query('UPDATE stores SET store_name = $1, logo_url = $2, store_email = $3 WHERE store_id = $4', [storeName, logoUrl, storeEmail, storeId]);
+        await db.query('UPDATE stores SET store_name = $1, logo_url = $2, store_email = $3, direct_prompt_enabled = $4 WHERE store_id = $5', [storeName, logoUrl, storeEmail, directPromptEnabled || false, storeId]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
