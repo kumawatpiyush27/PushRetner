@@ -6,5 +6,19 @@ build/
 coverage/
 .vscode/
 
-.vercel
+.vercel/
 .env*.local
+
+# Sensitive keys and deployment secrets
+keys.json
+temp_priv.txt
+temp_pub.txt
+temp_keys.txt
+vapid-keys.txt
+backend/vapid-keys.txt
+VERCEL_KEYS.txt
+shopify_info.json
+shopify_info_utf8.json
+*.log
+*.tmp
+*.bak
