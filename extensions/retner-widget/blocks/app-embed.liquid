@@ -23,20 +23,30 @@
 {% if block.settings.enable_spin_wheel %}
   <script data-retner-loader>
     (function() {
-      console.log("[Retner] Loader Version 120 - Initializing...");
+      console.log("[Retner] Loader Version 122 - Initializing...");
 
       var shop = "{{ shop.permanent_domain }}";
 
       // Use the API Base URL from settings (entered in Shopify theme editor)
       var rawApiBase = "{{ block.settings.api_base_url | strip }}";
+      var defaultApiBase = "https://retner-smart-push-p0sbqzrcv-piyushs-projects-79c86bdd.vercel.app";
 
-      // Fallback to hardcoded if setting is empty
-      if (!rawApiBase || rawApiBase.trim() === "") {
-        rawApiBase = "https://test.thebotmode.com";
+      // Fallback to hardcoded if setting is empty or old ngrok URL is still configured
+      if (!rawApiBase || rawApiBase.trim() === "" || /ngrok-free\.dev/i.test(rawApiBase)) {
+        if (!rawApiBase || rawApiBase.trim() === "") {
+          console.warn("[Retner] API Base URL is empty. Using default production API base.");
+        } else {
+          console.warn("[Retner] Old ngrok API Base detected. Switching to default production API base.");
+        }
+        rawApiBase = defaultApiBase;
       }
 
       // ⚠️ CRITICAL: Force HTTPS — Shopify is HTTPS, HTTP calls get blocked by browser (Mixed Content)
       var apiBase = rawApiBase.replace(/^http:\/\//i, "https://");
+      if (!/^https:\/\//i.test(apiBase)) {
+        console.warn("[Retner] Invalid API Base URL. Falling back to production URL.");
+        apiBase = defaultApiBase;
+      }
 
       console.log("[Retner] Shop:", shop);
       console.log("[Retner] API Base:", apiBase);
@@ -44,6 +54,27 @@
       if (!shop || shop.trim() === "") {
         console.error("[Retner] No shop domain found. Widget will not load.");
         return;
+      }
+
+      function getVisitorId() {
+        var cookieNames = ["_retner_vid", "visitorId", "retner_vid", "visitor_id"];
+        for (var i = 0; i < cookieNames.length; i++) {
+          var match = document.cookie.match(
+            new RegExp("(^|;)\\s*" + cookieNames[i] + "\\s*=\\s*([^;]+)")
+          );
+          if (match && match[2]) {
+            var val = decodeURIComponent(match[2].trim());
+            if (val && val !== "undefined" && val !== "null") return val;
+          }
+        }
+        var storageKeys = ["retner_visitor_id", "visitorId", "visitor_id", "_retner_vid", "retner_vid"];
+        for (var j = 0; j < storageKeys.length; j++) {
+          try {
+            var id = localStorage.getItem(storageKeys[j]);
+            if (id && id !== "undefined" && id !== "null") return id.trim();
+          } catch (e) {}
+        }
+        return "";
       }
 
       // 1. Fetch active tool config to get tool IDs for this shop
@@ -76,9 +107,34 @@
           var tool = tools[0];
           console.log("[Retner] Checking triggers for tool:", tool._id);
 
+          var visitorId = getVisitorId();
+          if (!visitorId) {
+            console.warn("[Retner] No visitorId found. Creating fallback ID.");
+            try {
+              visitorId = localStorage.getItem("retner_fallback_id");
+              if (!visitorId) {
+                visitorId = "retner-" + Date.now() + "-" + Math.random().toString(36).slice(2,10);
+                localStorage.setItem("retner_fallback_id", visitorId);
+                document.cookie = "_retner_vid=" + encodeURIComponent(visitorId) + ";path=/;max-age=" + (60*60*24*365);
+              }
+              console.log("[Retner] Using fallback visitorId:", visitorId);
+            } catch (e) {
+              console.warn("[Retner] Fallback visitorId creation failed:", e);
+            }
+          } else {
+            console.log("[Retner] visitorId found:", visitorId);
+          }
+
           var params = new URLSearchParams({
-            device: /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
-            currentUrl: window.location.href
+            shop: shop,
+            device: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop",
+            visitorType: localStorage.getItem("retner_is_subscriber")
+              ? "subscriber"
+              : (localStorage.getItem("retner_has_visited") ? "returning" : "new"),
+            currentUrl: window.location.href,
+            visitorId: visitorId,
+            cart: "{}",
+            product: "{}"
           });
 
           fetch(apiBase + "/api/lead-capture/" + tool._id + "/check-trigger?" + params.toString(), {
